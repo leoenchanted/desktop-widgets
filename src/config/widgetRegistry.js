@@ -27,8 +27,8 @@ export const WIDGET_REGISTRY = {
     name: "月历",
     icon: FaCalendarAlt,
     component: CalendarWidget,
-    defaultW: 1,
-    defaultH: 1,
+    defaultW: 2,
+    defaultH: 2,
     category: "时间 & 日期",
   },
   horoscope: {

@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e \"console.log\\(JSON.parse\\(require\\('fs'\\).readFileSync\\('/c/Users/admin/Desktop/LEO/desktop-widgets/node_modules/tailwindcss/package.json'\\)\\).version\\)\")",
+      "Bash(node -e \"console.log\\(JSON.parse\\(require\\('fs'\\).readFileSync\\('/c/Users/admin/Desktop/LEO/desktop-widgets/node_modules/react/package.json'\\)\\).version\\)\")",
+      "Bash(node -e \"console.log\\(JSON.parse\\(require\\('fs'\\).readFileSync\\('/c/Users/admin/Desktop/LEO/desktop-widgets/node_modules/vite/package.json'\\)\\).version\\)\")",
+      "Bash(node -e \"const p = require\\('./node_modules/tailwindcss/package.json'\\); console.log\\('Tailwind:', p.version\\)\")",
+      "Bash(node -e \"const p = require\\('./node_modules/@dnd-kit/core/package.json'\\); console.log\\('dnd-kit/core:', p.version\\)\")",
+      "Bash(node -e \"const p = require\\('./node_modules/@dnd-kit/sortable/package.json'\\); console.log\\('dnd-kit/sortable:', p.version\\)\")",
+      "Bash(npm install *)",
+      "Bash(node server/index.js)",
+      "Bash(curl -s http://localhost:3001/api/health)",
+      "Bash(kill %1)",
+      "Bash(curl -s -X POST http://localhost:3001/api/todos -H 'Content-Type: application/json' -d '{\"date\":\"2026-05-13\",\"text\":\"测试任务1\"}')",
+      "Bash(curl -s -X POST http://localhost:3001/api/todos -H 'Content-Type: application/json' -d '{\"date\":\"2026-05-13\",\"text\":\"测试任务2\"}')",
+      "Bash(curl -s \"http://localhost:3001/api/todos?date=2026-05-13\")",
+      "Bash(curl -s -X PUT http://localhost:3001/api/markdown -H 'Content-Type: application/json' -d '{\"date\":\"2026-05-13\",\"content\":\"# Hello\\\\nThis is a test.\"}')",
+      "Bash(curl -s \"http://localhost:3001/api/markdown?date=2026-05-13\")",
+      "Bash(npx vite *)",
+      "Bash(curl -s -X POST http://localhost:3001/api/todos -H \"Content-Type: application/json\" -d '{\"date\":\"2026-05-13\",\"text\":\"Test task 1\"}')",
+      "Bash(curl -s -X POST http://localhost:3001/api/todos -H \"Content-Type: application/json\" -d '{\"date\":\"2026-05-13\",\"text\":\"Test task 2\"}')",
+      "Bash(curl -s -X PUT http://localhost:3001/api/markdown -H \"Content-Type: application/json\" -d '{\"date\":\"2026-05-13\",\"content\":\"# Daily Notes\\\\nToday I built a great app.\"}')",
+      "Bash(curl -s -X POST http://localhost:3001/api/reviews/generate -H \"Content-Type: application/json\" -d '{\"date\":\"2026-05-13\"}')",
+      "Bash(curl -s -X POST http://localhost:3001/api/pomodoro -H \"Content-Type: application/json\" -d '{\"date\":\"2026-05-13\",\"duration\":25}')",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(f'Todos: {len\\(d[\\\\\"data\\\\\"][\\\\\"todos\\\\\"]\\)}, Markdown: {len\\(d[\\\\\"data\\\\\"][\\\\\"markdown_entries\\\\\"]\\)}, Reviews: {len\\(d[\\\\\"data\\\\\"][\\\\\"daily_reviews\\\\\"]\\)}, Pomodoro: {len\\(d[\\\\\"data\\\\\"][\\\\\"pomodoro_sessions\\\\\"]\\)}'\\)\")"
+    ]
+  }
+}

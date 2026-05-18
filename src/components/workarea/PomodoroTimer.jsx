@@ -1,69 +1,102 @@
 import React, { useEffect } from 'react';
-import { FaPlay, FaPause, FaRedo } from 'react-icons/fa';
+import { FaPause, FaPlay, FaRedo, FaSeedling } from 'react-icons/fa';
 import { usePomodoroStore } from '../../store/usePomodoroStore';
+import GlassPanel from '../ui/GlassPanel';
+import PanelHeader from '../ui/PanelHeader';
+
+const RADIUS = 56;
+const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
 const PomodoroTimer = () => {
-  const { minutes, seconds, isRunning, sessionCount, start, pause, reset, cleanup, currentDate, fetchSessions } = usePomodoroStore();
+  const {
+    minutes,
+    seconds,
+    isRunning,
+    sessionCount,
+    start,
+    pause,
+    reset,
+    cleanup,
+    currentDate,
+    fetchSessions,
+  } = usePomodoroStore();
 
   useEffect(() => {
     fetchSessions(currentDate);
     return () => cleanup();
-  }, [currentDate]);
+  }, [cleanup, currentDate, fetchSessions]);
 
-  const formatTime = (m, s) =>
-    `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-
-  const progress = 1 - (minutes * 60 + seconds) / (25 * 60);
+  const formatTime = (m, s) => `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  const remainingSeconds = minutes * 60 + seconds;
+  const progress = 1 - remainingSeconds / (25 * 60);
 
   return (
-    <div className="bg-black/60 border-2 border-red-500/70 rounded-lg flex flex-col items-center justify-center p-4 h-full">
-      <span className="text-[10px] uppercase tracking-widest font-bold text-red-400/80 mb-3">
-        番茄钟
-      </span>
+    <GlassPanel className={`flex h-full min-h-[250px] flex-col ${isRunning ? 'pomodoro-running' : ''}`}>
+      <PanelHeader eyebrow="Focus" title="番茄钟" icon={FaSeedling} />
 
-      {/* Timer Circle */}
-      <div className="relative w-28 h-28 mb-3">
-        <svg className="w-full h-full -rotate-90" viewBox="0 0 128 128">
-          <circle cx="64" cy="64" r="56" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="4" />
-          <circle
-            cx="64" cy="64" r="56"
-            fill="none"
-            stroke={isRunning ? '#ef4444' : 'rgba(255,255,255,0.3)'}
-            strokeWidth="4"
-            strokeLinecap="round"
-            strokeDasharray={`${2 * Math.PI * 56}`}
-            strokeDashoffset={`${2 * Math.PI * 56 * (1 - progress)}`}
-            className="transition-all duration-1000 ease-linear"
-          />
-        </svg>
-        <div className="absolute inset-0 flex items-center justify-center">
-          <span className={`text-2xl font-light tracking-wider ${isRunning ? 'text-white' : 'text-white/60'}`}>
-            {formatTime(minutes, seconds)}
-          </span>
+      <div className="flex flex-1 flex-col items-center justify-center py-5">
+        <div className="relative h-36 w-36">
+          <svg className="h-full w-full -rotate-90" viewBox="0 0 128 128">
+            <circle
+              cx="64"
+              cy="64"
+              r={RADIUS}
+              fill="none"
+              stroke="rgba(255,255,255,0.08)"
+              strokeWidth="7"
+            />
+            <circle
+              cx="64"
+              cy="64"
+              r={RADIUS}
+              fill="none"
+              stroke={isRunning ? '#7ee7ad' : 'rgba(128,191,255,0.72)'}
+              strokeWidth="7"
+              strokeLinecap="round"
+              strokeDasharray={CIRCUMFERENCE}
+              strokeDashoffset={CIRCUMFERENCE * (1 - progress)}
+              className="transition-all duration-1000 ease-linear"
+            />
+          </svg>
+          <div className="absolute inset-0 flex flex-col items-center justify-center">
+            <span className="text-4xl font-semibold tracking-tight text-white">
+              {formatTime(minutes, seconds)}
+            </span>
+            <span className="mt-1 text-[11px] font-medium text-white/36">
+              {isRunning ? '专注中' : '准备开始'}
+            </span>
+          </div>
+        </div>
+
+        <div className="mt-5 flex items-center gap-3">
+          <button
+            onClick={isRunning ? pause : start}
+            className="flex h-11 w-11 items-center justify-center rounded-full bg-[#80bfff]/22 text-white ring-1 ring-[#80bfff]/28 transition-all hover:bg-[#80bfff]/32 active:scale-95"
+            title={isRunning ? '暂停' : '开始'}
+          >
+            {isRunning ? <FaPause size={13} /> : <FaPlay size={13} className="ml-0.5" />}
+          </button>
+          <button
+            onClick={reset}
+            className="glass-control flex h-11 w-11 items-center justify-center text-white/58 hover:text-white"
+            title="重置"
+          >
+            <FaRedo size={13} />
+          </button>
         </div>
       </div>
 
-      {/* Controls */}
-      <div className="flex gap-3 mb-2">
-        <button
-          onClick={isRunning ? pause : start}
-          className="w-9 h-9 rounded-full bg-red-500/80 hover:bg-red-500 flex items-center justify-center text-white transition-all active:scale-90"
-        >
-          {isRunning ? <FaPause size={12} /> : <FaPlay size={12} />}
-        </button>
-        <button
-          onClick={reset}
-          className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white/60 hover:text-white transition-all active:scale-90"
-        >
-          <FaRedo size={12} />
-        </button>
+      <div className="grid grid-cols-2 gap-2">
+        <div className="glass-panel-soft p-3 text-center">
+          <div className="text-lg font-semibold text-white">{sessionCount}</div>
+          <div className="mt-0.5 text-[10px] font-medium text-white/35">今日完成</div>
+        </div>
+        <div className="glass-panel-soft p-3 text-center">
+          <div className="text-lg font-semibold text-white">{sessionCount * 25}</div>
+          <div className="mt-0.5 text-[10px] font-medium text-white/35">专注分钟</div>
+        </div>
       </div>
-
-      {/* Session count */}
-      <div className="text-[10px] text-white/30">
-        今日完成 <span className="text-red-400/80 font-semibold">{sessionCount}</span> 个
-      </div>
-    </div>
+    </GlassPanel>
   );
 };
 

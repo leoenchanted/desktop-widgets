@@ -59,75 +59,210 @@
   animation: pulseGlow 2s ease-in-out infinite;
 }
 
-/* Markdown Preview custom styles (replaces Tailwind prose) */
+/* Markdown Preview custom styles (replaces Tailwind prose reset) */
 .markdown-preview {
-  color: rgba(255, 255, 255, 0.85);
-  line-height: 1.7;
+  color: rgba(255, 255, 255, 0.84);
+  line-height: 1.78;
+  overflow-wrap: anywhere;
 }
-.markdown-preview h1 { font-size: 1.5rem; font-weight: 700; margin: 1.5rem 0 0.75rem; color: #fff; }
-.markdown-preview h2 { font-size: 1.25rem; font-weight: 600; margin: 1.25rem 0 0.5rem; color: #fff; }
-.markdown-preview h3 { font-size: 1.1rem; font-weight: 600; margin: 1rem 0 0.5rem; color: #fff; }
-.markdown-preview h4 { font-size: 1rem; font-weight: 600; margin: 0.75rem 0 0.5rem; color: #fff; }
-.markdown-preview p { margin: 0.5rem 0; }
-.markdown-preview a { color: #60a5fa; text-decoration: none; }
-.markdown-preview a:hover { text-decoration: underline; }
-.markdown-preview strong { color: #fff; font-weight: 700; }
-.markdown-preview em { font-style: italic; }
-.markdown-preview code {
-  background: rgba(255, 255, 255, 0.1);
-  color: #60a5fa;
-  padding: 0.125rem 0.375rem;
-  border-radius: 0.25rem;
-  font-size: 0.875em;
-  font-family: 'SF Mono', monospace;
+
+.markdown-preview > *:first-child {
+  margin-top: 0;
 }
-.markdown-preview pre {
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 0.5rem;
-  padding: 1rem;
-  overflow-x: auto;
-  margin: 0.75rem 0;
+
+.markdown-preview > *:last-child {
+  margin-bottom: 0;
 }
-.markdown-preview pre code {
-  background: none;
-  padding: 0;
-  border-radius: 0;
-  color: inherit;
+
+.markdown-preview h1,
+.markdown-preview h2,
+.markdown-preview h3,
+.markdown-preview h4,
+.markdown-preview h5,
+.markdown-preview h6 {
+  color: rgba(255, 255, 255, 0.96);
+  font-weight: 720;
+  letter-spacing: 0;
+  line-height: 1.22;
 }
-.markdown-preview blockquote {
-  border-left: 3px solid #ef4444;
-  padding-left: 1rem;
-  color: rgba(255, 255, 255, 0.6);
-  margin: 0.75rem 0;
+
+.markdown-preview h1 {
+  font-size: 1.9rem;
+  margin: 0 0 1rem;
+}
+
+.markdown-preview h2 {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  font-size: 1.45rem;
+  margin: 1.8rem 0 0.8rem;
+  padding-bottom: 0.45rem;
+}
+
+.markdown-preview h3 {
+  font-size: 1.15rem;
+  margin: 1.45rem 0 0.55rem;
+}
+
+.markdown-preview h4,
+.markdown-preview h5,
+.markdown-preview h6 {
+  font-size: 1rem;
+  margin: 1.15rem 0 0.45rem;
+}
+
+.markdown-preview p {
+  margin: 0.7rem 0;
+}
+
+.markdown-preview a {
+  color: #b7dcff;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.markdown-preview a:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.markdown-preview strong {
+  color: #fff;
+  font-weight: 750;
+}
+
+.markdown-preview em {
+  color: rgba(255, 255, 255, 0.78);
   font-style: italic;
 }
-.markdown-preview ul, .markdown-preview ol {
-  margin: 0.5rem 0;
-  padding-left: 1.5rem;
+
+.markdown-preview ul,
+.markdown-preview ol {
+  margin: 0.7rem 0;
+  padding-left: 1.45rem;
 }
-.markdown-preview li { margin: 0.25rem 0; }
-.markdown-preview img { max-width: 100%; border-radius: 0.75rem; margin: 1rem 0; }
-.markdown-preview hr {
-  border: none;
-  border-top: 1px solid rgba(255, 255, 255, 0.15);
-  margin: 1.5rem 0;
+
+.markdown-preview ul {
+  list-style: disc;
 }
-.markdown-preview table {
-  width: 100%;
-  border-collapse: collapse;
+
+.markdown-preview ol {
+  list-style: decimal;
+}
+
+.markdown-preview li {
+  margin: 0.3rem 0;
+  padding-left: 0.2rem;
+}
+
+.markdown-preview li::marker {
+  color: rgba(183, 220, 255, 0.82);
+  font-weight: 700;
+}
+
+.markdown-preview li > p {
+  margin: 0.25rem 0;
+}
+
+.markdown-preview ul.contains-task-list {
+  list-style: none;
+  padding-left: 0;
+}
+
+.markdown-preview .task-list-item {
+  align-items: flex-start;
+  display: flex;
+  gap: 0.55rem;
+  padding-left: 0;
+}
+
+.markdown-preview .task-list-item input {
+  accent-color: #7ee7ad;
+  height: 0.95rem;
+  margin-top: 0.38rem;
+  width: 0.95rem;
+}
+
+.markdown-preview code {
+  background: rgba(183, 220, 255, 0.12);
+  border: 1px solid rgba(183, 220, 255, 0.13);
+  border-radius: 0.45rem;
+  color: #d8ebff;
+  font-family: "SF Mono", "Cascadia Code", Consolas, monospace;
+  font-size: 0.88em;
+  padding: 0.12rem 0.38rem;
+}
+
+.markdown-preview pre {
+  background: rgba(6, 10, 16, 0.58);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 1rem;
   margin: 1rem 0;
+  overflow-x: auto;
+  padding: 1rem;
 }
-.markdown-preview th, .markdown-preview td {
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  padding: 0.5rem 0.75rem;
+
+.markdown-preview pre code {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.84);
+  display: block;
+  line-height: 1.65;
+  padding: 0;
+  white-space: pre;
+}
+
+.markdown-preview blockquote {
+  background: rgba(128, 191, 255, 0.08);
+  border-left: 3px solid #b7dcff;
+  border-radius: 0 1rem 1rem 0;
+  color: rgba(255, 255, 255, 0.68);
+  margin: 1rem 0;
+  padding: 0.8rem 1rem;
+}
+
+.markdown-preview blockquote p {
+  margin: 0.35rem 0;
+}
+
+.markdown-preview img {
+  border-radius: 1rem;
+  display: block;
+  margin: 1rem 0;
+  max-width: 100%;
+}
+
+.markdown-preview hr {
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  border: none;
+  height: 1px;
+  margin: 1.6rem 0;
+}
+
+.markdown-preview table {
+  border-collapse: collapse;
+  display: block;
+  margin: 1rem 0;
+  max-width: 100%;
+  overflow-x: auto;
+  width: max-content;
+}
+
+.markdown-preview th,
+.markdown-preview td {
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  font-size: 0.9rem;
+  padding: 0.55rem 0.75rem;
   text-align: left;
-  font-size: 0.875rem;
 }
+
 .markdown-preview th {
-  background: rgba(255, 255, 255, 0.05);
-  font-weight: 600;
-  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.92);
+  font-weight: 700;
+}
+
+.markdown-preview tr:nth-child(even) td {
+  background: rgba(255, 255, 255, 0.035);
 }
 
 /* Typing cursor effect */

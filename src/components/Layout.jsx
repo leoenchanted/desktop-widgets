@@ -11,21 +11,17 @@ const Layout = ({ widgetBoard, workArea }) => {
 
       <div className="overflow-hidden px-4 md:px-6">
         <div
-          className="flex transition-transform duration-500 ease-apple"
+          className="flex transition-transform duration-700 ease-apple"
           style={{
             transform: activeSection === 'widgets' ? 'translateX(0)' : 'translateX(-50%)',
             width: '200%',
           }}
         >
-          {/* 组件区 */}
-          <div className="w-1/2 min-h-[60vh]">
-            {widgetBoard}
+          <div className="w-1/2 px-1 md:px-2">
+            <div className="mx-auto max-w-[1640px] pb-10">{widgetBoard}</div>
           </div>
 
-          {/* 工作区 */}
-          <div className="w-1/2 min-h-[60vh] px-4">
-            {workArea}
-          </div>
+          <div className="w-1/2 px-1 md:px-2">{workArea}</div>
         </div>
       </div>
     </div>

@@ -1,34 +1,29 @@
-import React, { useState, useRef } from "react";
-import { FaPlus, FaImage, FaTrash, FaLink, FaFileUpload } from "react-icons/fa";
+import React, { useRef, useState } from 'react';
+import { FaFileUpload, FaLink, FaTrash } from 'react-icons/fa';
 
 const ImageWidget = () => {
-  // 每个组件应该有独立的存储 Key (这里为了演示简化，实际最好用 props.id)
-  // 为了防止所有图片组件同步，建议父组件传 id 进来，这里暂且用 state 内部管理
   const [imgSrc, setImgSrc] = useState(null);
-  const [showInput, setShowInput] = useState(false); // 控制 URL 输入框显示
-  const fileInputRef = useRef();
+  const [showInput, setShowInput] = useState(false);
+  const fileInputRef = useRef(null);
 
-  // 处理本地文件
   const handleFile = (e) => {
     const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (ev) => setImgSrc(ev.target.result);
-      reader.readAsDataURL(file);
-    }
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (ev) => setImgSrc(ev.target.result);
+    reader.readAsDataURL(file);
   };
 
-  // 处理 URL 输入
   const handleUrlSubmit = (e) => {
-    if (e.key === "Enter") {
-      setImgSrc(e.target.value);
+    if (e.key === 'Enter' && e.target.value.trim()) {
+      setImgSrc(e.target.value.trim());
       setShowInput(false);
     }
   };
 
   return (
-    <div className="w-full h-full relative flex flex-col items-center justify-center group/img">
-      {/* 隐藏的文件输入 */}
+    <div className="group/img relative flex h-full w-full flex-col items-center justify-center overflow-hidden">
       <input
         type="file"
         ref={fileInputRef}
@@ -37,61 +32,57 @@ const ImageWidget = () => {
         onChange={handleFile}
       />
 
-      {/* --- 状态 1: 已有图片 --- */}
       {imgSrc ? (
         <>
           <div
-            className="w-full h-full bg-cover bg-center absolute inset-0 transition-transform duration-700 hover:scale-110"
+            className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover/img:scale-105"
             style={{ backgroundImage: `url(${imgSrc})` }}
           />
-          {/* 控制按钮 */}
-          <div className="absolute bottom-3 right-3 flex gap-2 opacity-0 group-hover/img:opacity-100 transition-opacity z-10">
+          <div className="absolute inset-0 bg-black/8" />
+          <div className="absolute bottom-3 right-3 z-10 flex gap-2 opacity-0 transition-opacity group-hover/img:opacity-100">
             <button
               onClick={() => setImgSrc(null)}
-              className="w-8 h-8 rounded-full bg-black/60 backdrop-blur-md text-white flex items-center justify-center hover:bg-red-500 transition-colors shadow-lg"
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-black/42 text-white/74 backdrop-blur-xl transition-colors hover:bg-[#ff8d8d]/80 hover:text-white"
+              title="移除图片"
             >
               <FaTrash size={12} />
             </button>
           </div>
         </>
       ) : (
-        /* --- 状态 2: 空状态 (选择上传方式) --- */
-        <div className="flex flex-col items-center gap-3 w-full px-4">
+        <div className="flex w-full flex-col items-center gap-4 px-5 text-center">
           {showInput ? (
-            // URL 输入模式
-            <div className="w-full animate-fade-in">
-              <input
-                autoFocus
-                placeholder="粘贴图片链接并回车..."
-                className="w-full bg-white/10 border border-white/20 rounded-lg px-2 py-1 text-xs text-white outline-none focus:bg-white/20"
-                onKeyDown={handleUrlSubmit}
-                onBlur={() => setShowInput(false)}
-              />
-            </div>
+            <input
+              autoFocus
+              placeholder="粘贴图片链接"
+              className="w-full rounded-2xl border border-white/12 bg-white/8 px-3 py-2 text-sm text-white outline-none placeholder-white/28 focus:border-[#80bfff]/40"
+              onKeyDown={handleUrlSubmit}
+              onBlur={() => setShowInput(false)}
+            />
           ) : (
-            // 按钮选择模式
             <>
+              <div className="text-sm font-semibold text-white/56">相框</div>
               <div className="flex gap-4">
                 <button
                   onClick={() => fileInputRef.current.click()}
-                  className="flex flex-col items-center gap-2 text-white/50 hover:text-white transition-colors"
+                  className="flex flex-col items-center gap-2 text-white/42 transition-colors hover:text-white"
                   title="本地上传"
                 >
-                  <div className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/20 hover:scale-110 transition-all">
+                  <span className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/7">
                     <FaFileUpload />
-                  </div>
-                  <span className="text-[10px]">上传</span>
+                  </span>
+                  <span className="text-[10px] font-medium">上传</span>
                 </button>
 
                 <button
                   onClick={() => setShowInput(true)}
-                  className="flex flex-col items-center gap-2 text-white/50 hover:text-white transition-colors"
-                  title="网络链接"
+                  className="flex flex-col items-center gap-2 text-white/42 transition-colors hover:text-white"
+                  title="图片链接"
                 >
-                  <div className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/20 hover:scale-110 transition-all">
+                  <span className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/7">
                     <FaLink />
-                  </div>
-                  <span className="text-[10px]">链接</span>
+                  </span>
+                  <span className="text-[10px] font-medium">链接</span>
                 </button>
               </div>
             </>
@@ -101,4 +92,5 @@ const ImageWidget = () => {
     </div>
   );
 };
+
 export default ImageWidget;

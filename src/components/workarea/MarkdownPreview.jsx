@@ -1,24 +1,25 @@
 import React, { useMemo } from 'react';
 import { marked } from 'marked';
+import { sanitizeHtml } from '../../utils/sanitizeHtml';
 
-// Configure marked once
-marked.use({
+marked.setOptions({
   gfm: true,
   breaks: true,
+  async: false,
 });
 
 const MarkdownPreview = ({ content }) => {
   const html = useMemo(() => {
     try {
-      return marked.parse(content || '');
+      return sanitizeHtml(marked.parse(content || ''));
     } catch {
-      return '<p>渲染错误</p>';
+      return '<p>预览渲染失败</p>';
     }
   }, [content]);
 
   return (
     <div
-      className="markdown-preview text-sm leading-relaxed"
+      className="markdown-preview mx-auto max-w-3xl text-[15px] leading-relaxed"
       dangerouslySetInnerHTML={{ __html: html }}
     />
   );

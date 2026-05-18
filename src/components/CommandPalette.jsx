@@ -1,67 +1,155 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { FaSearch, FaExchangeAlt, FaPlus, FaDownload, FaCalendarAlt } from 'react-icons/fa';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  FaCalendarAlt,
+  FaDownload,
+  FaExchangeAlt,
+  FaPlus,
+  FaSearch,
+  FaTasks,
+  FaThLarge,
+} from 'react-icons/fa';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { useTodoStore } from '../store/useTodoStore';
 import { useMarkdownStore } from '../store/useMarkdownStore';
 import { exportBackup } from '../utils/backup';
 import { today } from '../utils/date';
+import { AVAILABLE_WIDGETS } from '../config/widgetRegistry';
 
-const CommandPalette = ({ isOpen, close }) => {
+const CommandPalette = ({ close, onAddWidget, onOpenBackup }) => {
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef(null);
 
-  const { toggleSection, activeSection } = useSettingsStore();
+  const { toggleSection, activeSection, setSection } = useSettingsStore();
   const { addTodo, setCurrentDate: setTodoDate } = useTodoStore();
-  const { setCurrentDate: setMdDate } = useMarkdownStore();
+  const { setCurrentDate: setMarkdownDate } = useMarkdownStore();
 
   useEffect(() => {
-    if (isOpen) {
-      setQuery('');
-      setSelectedIndex(0);
-      setTimeout(() => inputRef.current?.focus(), 50);
-    }
-  }, [isOpen]);
+    const timer = setTimeout(() => inputRef.current?.focus(), 40);
+    return () => clearTimeout(timer);
+  }, []);
 
-  const commands = [
-    {
-      id: 'toggle-section',
-      icon: <FaExchangeAlt />,
-      label: `切换到${activeSection === 'widgets' ? '工作区' : '组件区'}`,
-      action: () => { toggleSection(); close(); },
-    },
-    {
-      id: 'add-todo',
-      icon: <FaPlus />,
-      label: '添加任务: ',
-      action: (q) => {
-        const text = q.replace(/^add todo/i, '').trim() || '新任务';
-        addTodo(text);
-        close();
+  const baseCommands = useMemo(() => {
+    const nextSection = activeSection === 'widgets' ? '工作区' : '组件区';
+    const commands = [
+      {
+        id: 'toggle-section',
+        icon: FaExchangeAlt,
+        label: `切换到${nextSection}`,
+        keywords: ['section', 'switch', '切换'],
+        action: () => {
+          toggleSection();
+          close();
+        },
       },
-    },
-    {
-      id: 'goto-today',
-      icon: <FaCalendarAlt />,
-      label: '跳转至今',
-      action: () => {
-        const d = today();
-        setTodoDate(d);
-        setMdDate(d);
-        close();
+      {
+        id: 'goto-widgets',
+        icon: FaThLarge,
+        label: '打开组件区',
+        keywords: ['widgets', '组件'],
+        action: () => {
+          setSection('widgets');
+          close();
+        },
       },
-    },
-    {
-      id: 'export',
-      icon: <FaDownload />,
-      label: '导出备份',
-      action: async () => { await exportBackup(); close(); },
-    },
-  ];
+      {
+        id: 'goto-work',
+        icon: FaTasks,
+        label: '打开工作区',
+        keywords: ['work', 'workspace', '工作'],
+        action: () => {
+          setSection('work');
+          close();
+        },
+      },
+      {
+        id: 'add-todo',
+        icon: FaPlus,
+        label: '添加任务',
+        keywords: ['todo', 'task', '任务'],
+        action: async (q) => {
+          const text = q.replace(/^(todo|task|任务|添加任务)\s*/i, '').trim() || '新任务';
+          await addTodo(text);
+          setSection('work');
+          close();
+        },
+      },
+      {
+        id: 'goto-today',
+        icon: FaCalendarAlt,
+        label: '跳转到今天',
+        keywords: ['today', 'date', '今天', '日期'],
+        action: async () => {
+          const date = today();
+          await Promise.all([setTodoDate(date), setMarkdownDate(date)]);
+          setSection('work');
+          close();
+        },
+      },
+      {
+        id: 'backup-panel',
+        icon: FaDownload,
+        label: '打开备份',
+        keywords: ['backup', 'import', 'export', '备份', '导入', '导出'],
+        action: () => {
+          onOpenBackup?.();
+          close();
+        },
+      },
+      {
+        id: 'export',
+        icon: FaDownload,
+        label: '立即导出 JSON',
+        keywords: ['export', 'json', '导出'],
+        action: async () => {
+          await exportBackup();
+          close();
+        },
+      },
+    ];
 
-  const filtered = query
-    ? commands.filter((c) => c.label.toLowerCase().includes(query.toLowerCase()))
-    : commands;
+    AVAILABLE_WIDGETS.forEach((widget) => {
+      commands.push({
+        id: `widget-${widget.id}`,
+        icon: widget.icon,
+        label: `添加组件：${widget.name}`,
+        keywords: ['widget', 'add', '组件', widget.name, widget.category],
+        action: () => {
+          onAddWidget?.(widget);
+          setSection('widgets');
+          close();
+        },
+      });
+    });
+
+    return commands;
+  }, [
+    activeSection,
+    addTodo,
+    close,
+    onAddWidget,
+    onOpenBackup,
+    setMarkdownDate,
+    setSection,
+    setTodoDate,
+    toggleSection,
+  ]);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return baseCommands;
+
+    return baseCommands.filter((command) => {
+      const haystack = [command.label, ...(command.keywords || [])]
+        .join(' ')
+        .toLowerCase();
+      return haystack.includes(q) || q.startsWith('todo ') || q.startsWith('任务 ');
+    });
+  }, [baseCommands, query]);
+
+  const runCommand = (command) => {
+    command?.action(query);
+  };
 
   const handleKeyDown = (e) => {
     if (e.key === 'ArrowDown') {
@@ -72,68 +160,61 @@ const CommandPalette = ({ isOpen, close }) => {
       setSelectedIndex((i) => Math.max(i - 1, 0));
     } else if (e.key === 'Enter') {
       e.preventDefault();
-      if (filtered[selectedIndex]) {
-        filtered[selectedIndex].action(query);
-      }
+      runCommand(filtered[selectedIndex]);
     } else if (e.key === 'Escape') {
       close();
     }
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div
-      className="fixed inset-0 z-[9999] flex items-start justify-center pt-[15vh]"
-      onClick={close}
-    >
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+    <div className="fixed inset-0 z-[9999] flex items-start justify-center px-4 pt-[14vh]" onClick={close}>
+      <div className="absolute inset-0 bg-black/42 backdrop-blur-sm" />
 
-      {/* Panel */}
       <div
-        className="relative w-full max-w-lg bg-[#1c1c1e]/95 backdrop-blur-2xl border border-white/20 rounded-2xl shadow-2xl overflow-hidden animate-bubble origin-top"
+        className="glass-panel relative w-full max-w-2xl overflow-hidden p-0 shadow-2xl animate-bubble"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Search input */}
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-white/10">
-          <FaSearch className="text-white/30 flex-shrink-0" size={14} />
+        <div className="flex items-center gap-3 border-b border-white/10 px-5 py-4">
+          <FaSearch className="flex-shrink-0 text-white/34" size={14} />
           <input
             ref={inputRef}
             value={query}
-            onChange={(e) => { setQuery(e.target.value); setSelectedIndex(0); }}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setSelectedIndex(0);
+            }}
             onKeyDown={handleKeyDown}
-            placeholder="输入命令..."
-            className="flex-1 bg-transparent text-sm text-white outline-none placeholder-white/30"
+            placeholder="搜索命令、输入 todo 内容或添加组件"
+            className="min-w-0 flex-1 bg-transparent text-base text-white outline-none placeholder-white/30"
           />
-          <kbd className="text-[10px] text-white/30 bg-white/5 px-1.5 py-0.5 rounded border border-white/10">
+          <kbd className="rounded-lg border border-white/10 bg-white/8 px-2 py-1 text-[10px] font-semibold text-white/38">
             ESC
           </kbd>
         </div>
 
-        {/* Results */}
-        <div className="py-2 max-h-72 overflow-y-auto">
+        <div className="max-h-[420px] overflow-y-auto p-2 glass-scrollbar">
           {filtered.length === 0 ? (
-            <div className="px-4 py-8 text-center text-white/20 text-sm">
-              没有匹配的命令
-            </div>
+            <div className="px-4 py-10 text-center text-sm text-white/28">没有匹配的命令</div>
           ) : (
-            filtered.map((cmd, i) => (
-              <button
-                key={cmd.id}
-                onClick={() => cmd.action(query)}
-                className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${
-                  i === selectedIndex
-                    ? 'bg-white/10 text-white'
-                    : 'text-white/60 hover:bg-white/5 hover:text-white/80'
-                }`}
-              >
-                <span className="w-5 flex justify-center text-[#0A84FF]">
-                  {cmd.icon}
-                </span>
-                <span className="text-sm">{cmd.label}</span>
-              </button>
-            ))
+            filtered.map((command, index) => {
+              const Icon = command.icon;
+              return (
+                <button
+                  key={command.id}
+                  onClick={() => runCommand(command)}
+                  className={`flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition-all ${
+                    index === selectedIndex
+                      ? 'bg-white/12 text-white'
+                      : 'text-white/62 hover:bg-white/7 hover:text-white'
+                  }`}
+                >
+                  <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/9 text-[#b7dcff]">
+                    <Icon size={14} />
+                  </span>
+                  <span className="min-w-0 flex-1 truncate text-sm font-medium">{command.label}</span>
+                </button>
+              );
+            })
           )}
         </div>
       </div>

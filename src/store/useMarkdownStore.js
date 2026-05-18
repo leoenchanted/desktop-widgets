@@ -1,9 +1,10 @@
 import { create } from 'zustand';
 import { markdownApi } from '../api/markdownApi';
+import { today } from '../utils/date';
 
 export const useMarkdownStore = create((set, get) => ({
   content: '',
-  currentDate: new Date().toISOString().slice(0, 10),
+  currentDate: today(),
   wordCount: 0,
   charCount: 0,
   loading: false,

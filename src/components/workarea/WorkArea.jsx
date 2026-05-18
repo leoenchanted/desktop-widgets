@@ -1,60 +1,58 @@
 import React from 'react';
+import { FaCalendarDay, FaDatabase, FaLayerGroup } from 'react-icons/fa';
 import TodoList from './TodoList';
 import MarkdownEditor from './MarkdownEditor';
 import PomodoroTimer from './PomodoroTimer';
 import DailyReview from './DailyReview';
 import PlaceholderSlot from './PlaceholderSlot';
+import GlassPanel from '../ui/GlassPanel';
+import StatusPill from '../ui/StatusPill';
+import { formatDate, today } from '../../utils/date';
 
 const WorkArea = () => {
+  const date = today();
+
   return (
-    <div className="flex flex-col h-full gap-0">
-      {/* Top full-width bar */}
-      <div className="border-2 border-red-500/70 rounded-t-xl px-5 py-3 bg-black/40 mb-0">
-        <div className="flex items-center justify-between">
-          <span className="text-sm font-bold text-white/80">WORKSPACE</span>
-          <div className="flex items-center gap-3 text-[10px] text-white/40">
-            <span>Ctrl+S 保存</span>
-            <span>Cmd+K 命令</span>
+    <div className="mx-auto flex min-h-[calc(100vh-230px)] w-full max-w-[1640px] flex-col gap-4 pb-8">
+      <GlassPanel className="cockpit-panel cockpit-ruler px-5 py-5 md:px-6" padded={false}>
+        <div className="relative z-10 flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
+          <div>
+            <div className="panel-kicker flex items-center gap-2">
+              <FaLayerGroup size={11} />
+              Workspace Cockpit
+            </div>
+            <h1 className="mt-2 text-2xl font-medium leading-none text-white md:text-4xl">
+              今日工作台
+            </h1>
           </div>
-        </div>
-      </div>
 
-      {/* Three-column main area */}
-      <div className="flex flex-1 gap-0 min-h-0">
-        {/* Left column: Pomodoro + DailyReview */}
-        <div className="flex flex-col w-64 flex-shrink-0 gap-0 border-r-2 border-red-500/70">
-          <div className="flex-1 border-b-2 border-red-500/70 overflow-auto">
-            <div className="p-3 h-full">
-              <PomodoroTimer />
-            </div>
-          </div>
-          <div className="flex-1 overflow-auto">
-            <div className="p-3 h-full">
-              <DailyReview />
-            </div>
+          <div className="flex flex-wrap items-center gap-2 pb-1">
+            <StatusPill variant="accent">
+              <FaCalendarDay className="mr-1.5" size={11} />
+              {formatDate(date)}
+            </StatusPill>
+            <StatusPill>
+              <FaDatabase className="mr-1.5" size={10} />
+              本地数据库
+            </StatusPill>
           </div>
         </div>
+      </GlassPanel>
 
-        {/* Center column: Markdown Editor (main) */}
-        <div className="flex-1 min-w-0 border-r-2 border-red-500/70">
-          <div className="p-3 h-full">
-            <MarkdownEditor />
-          </div>
-        </div>
+      <div className="workspace-grid flex-1">
+        <aside className="workspace-stack">
+          <PomodoroTimer />
+          <DailyReview />
+        </aside>
 
-        {/* Right column: TodoList + Placeholder */}
-        <div className="flex flex-col w-72 flex-shrink-0 gap-0">
-          <div className="flex-1 border-b-2 border-red-500/70 overflow-auto">
-            <div className="p-3 h-full">
-              <TodoList />
-            </div>
-          </div>
-          <div className="flex-1 overflow-auto">
-            <div className="p-3 h-full">
-              <PlaceholderSlot />
-            </div>
-          </div>
-        </div>
+        <main className="min-h-[620px] min-w-0">
+          <MarkdownEditor />
+        </main>
+
+        <aside className="workspace-stack">
+          <TodoList />
+          <PlaceholderSlot title="灵感暂存" description="待扩展" />
+        </aside>
       </div>
     </div>
   );

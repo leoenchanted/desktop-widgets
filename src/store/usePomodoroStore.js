@@ -1,12 +1,13 @@
 import { create } from 'zustand';
 import { pomodoroApi } from '../api/pomodoroApi';
+import { today } from '../utils/date';
 
 export const usePomodoroStore = create((set, get) => ({
   minutes: 25,
   seconds: 0,
   isRunning: false,
   sessionCount: 0,
-  currentDate: new Date().toISOString().slice(0, 10),
+  currentDate: today(),
   intervalId: null,
 
   start: () => {
@@ -61,7 +62,9 @@ export const usePomodoroStore = create((set, get) => ({
     try {
       const sessions = await pomodoroApi.getByDate(date);
       set({ sessionCount: sessions.length });
-    } catch {}
+    } catch (error) {
+      console.error('Failed to fetch pomodoro sessions', error);
+    }
   },
 
   cleanup: () => {

@@ -15,6 +15,7 @@ app.use('/api/markdown', require('./routes/markdown'));
 app.use('/api/reviews', require('./routes/reviews'));
 app.use('/api/pomodoro', require('./routes/pomodoro'));
 app.use('/api/backup', require('./routes/backup'));
+app.use('/api/wallpaper', require('./routes/wallpaper'));
 
 // Health check
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));

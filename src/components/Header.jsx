@@ -1,44 +1,66 @@
-import React, { useState } from 'react';
-import { FaCog, FaCheck } from 'react-icons/fa';
+import React, { useEffect, useMemo, useState } from 'react';
+import { FaCheck, FaCog, FaPlus } from 'react-icons/fa';
 import { useSettingsStore } from '../store/useSettingsStore';
+import IconButton from './ui/IconButton';
+import { formatDate } from '../utils/date';
+
+const pad = (value) => String(value).padStart(2, '0');
 
 const Header = ({ onTogglePicker, showPicker }) => {
   const { username, setUsername, isEditMode, toggleEditMode } = useSettingsStore();
+  const [now, setNow] = useState(() => new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const greeting = useMemo(() => {
+    const hour = now.getHours();
+    if (hour < 6) return '夜深了';
+    if (hour < 12) return '早上好';
+    if (hour < 18) return '下午好';
+    return '晚上好';
+  }, [now]);
+
+  const dateKey = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
 
   return (
-    <header className="pt-10 pb-8 px-6 md:px-8 flex flex-col md:flex-row justify-between items-end w-full mx-auto">
-      <div>
-        <div className="text-lg text-white/80 mb-1">Good Morning,</div>
-        <input
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          className="text-5xl md:text-6xl font-bold bg-transparent border-b-2 border-transparent hover:border-white/30 focus:border-white/50 outline-none min-w-[200px] transition-all text-transparent bg-clip-text bg-gradient-to-br from-white to-gray-300 placeholder-white/50"
-          spellCheck={false}
-        />
+    <header className="mx-auto flex w-full max-w-[1680px] flex-col gap-5 px-5 pb-6 pt-7 md:flex-row md:items-end md:justify-between md:px-8">
+      <div className="min-w-0">
+        <div className="flex flex-wrap items-center gap-3 text-sm font-semibold text-white/58">
+          <span className="rounded-full border border-white/10 bg-white/7 px-3 py-1">
+            {greeting}
+          </span>
+          <span>{formatDate(dateKey)}</span>
+        </div>
+        <div className="mt-3 flex flex-wrap items-end gap-4">
+          <div className="display-type text-5xl font-medium leading-[0.9] text-white md:text-7xl">
+            {pad(now.getHours())}:{pad(now.getMinutes())}
+          </div>
+          <input
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            className="mb-1 min-w-[160px] max-w-full border-b border-transparent bg-transparent text-2xl font-medium tracking-normal text-white/88 outline-none transition-all placeholder-white/30 hover:border-white/18 focus:border-[#9cc9ff]/50 focus:text-white md:text-4xl"
+            spellCheck={false}
+          />
+        </div>
       </div>
 
-      <div className="flex gap-4 relative mt-6 md:mt-0">
-        <button
+      <div className="flex items-center gap-3">
+        <IconButton
+          icon={isEditMode ? FaCheck : FaCog}
           onClick={toggleEditMode}
-          className={`w-11 h-11 rounded-full flex items-center justify-center border transition-all duration-300 backdrop-blur-md ${
-            isEditMode
-              ? 'bg-[#0A84FF] border-[#0A84FF] text-white rotate-0'
-              : 'bg-white/15 border-white/30 hover:bg-white/30 rotate-0 hover:rotate-90'
-          }`}
-        >
-          {isEditMode ? <FaCheck /> : <FaCog size={18} />}
-        </button>
-
-        <button
+          active={isEditMode}
+          title={isEditMode ? '完成编辑' : '编辑桌面'}
+          className={isEditMode ? 'bg-[#9cc9ff]/20 text-white' : ''}
+        />
+        <IconButton
+          icon={FaPlus}
           onClick={onTogglePicker}
-          className={`w-11 h-11 rounded-full flex items-center justify-center border border-white/30 backdrop-blur-md transition-all duration-300 text-white ${
-            showPicker ? 'bg-white/30' : 'bg-white/15 hover:bg-white/30'
-          }`}
-        >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <path d="M8 3v10M3 8h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-          </svg>
-        </button>
+          active={showPicker}
+          title="添加组件"
+        />
       </div>
     </header>
   );

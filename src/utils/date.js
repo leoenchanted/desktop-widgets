@@ -1,18 +1,30 @@
+const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六'];
+
+export function localDateKey(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 export function today() {
-  return new Date().toISOString().slice(0, 10);
+  return localDateKey();
+}
+
+export function parseDateKey(dateStr) {
+  return new Date(`${dateStr}T00:00:00`);
 }
 
 export function formatDate(dateStr) {
-  const d = new Date(dateStr + 'T00:00:00');
+  const d = parseDateKey(dateStr);
   const year = d.getFullYear();
   const month = d.getMonth() + 1;
   const day = d.getDate();
-  const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
-  return `${year}年${month}月${day}日 周${weekdays[d.getDay()]}`;
+  return `${year}年${month}月${day}日 周${WEEKDAYS[d.getDay()]}`;
 }
 
 export function formatShort(dateStr) {
-  const d = new Date(dateStr + 'T00:00:00');
+  const d = parseDateKey(dateStr);
   return `${d.getMonth() + 1}/${d.getDate()}`;
 }
 
@@ -21,18 +33,19 @@ export function isToday(dateStr) {
 }
 
 export function getWeekday(dateStr) {
-  const d = new Date(dateStr + 'T00:00:00');
-  const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
-  return `周${weekdays[d.getDay()]}`;
+  const d = parseDateKey(dateStr);
+  return `周${WEEKDAYS[d.getDay()]}`;
 }
 
 export function dateRange(start, end) {
   const dates = [];
-  let current = new Date(start + 'T00:00:00');
-  const endDate = new Date(end + 'T00:00:00');
+  const current = parseDateKey(start);
+  const endDate = parseDateKey(end);
+
   while (current <= endDate) {
-    dates.push(current.toISOString().slice(0, 10));
+    dates.push(localDateKey(current));
     current.setDate(current.getDate() + 1);
   }
+
   return dates;
 }

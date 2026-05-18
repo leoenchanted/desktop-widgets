@@ -1,7 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { FaPlus, FaTasks } from 'react-icons/fa';
 import { useTodoStore } from '../../store/useTodoStore';
 import TodoItem from './TodoItem';
 import DatePickerPopover from './DatePickerPopover';
+import GlassPanel from '../ui/GlassPanel';
+import PanelHeader from '../ui/PanelHeader';
+import EmptyState from '../ui/EmptyState';
 
 const TodoList = () => {
   const {
@@ -15,14 +19,21 @@ const TodoList = () => {
     deleteTodo,
     updateTodo,
     fetchDates,
+    fetchTodos,
   } = useTodoStore();
 
   const [newText, setNewText] = useState('');
 
-  React.useEffect(() => {
-    useTodoStore.getState().fetchTodos(currentDate);
+  useEffect(() => {
+    fetchTodos(currentDate);
     fetchDates();
-  }, [currentDate]);
+  }, [currentDate, fetchDates, fetchTodos]);
+
+  const completedCount = useMemo(
+    () => items.filter((item) => Boolean(item.completed)).length,
+    [items],
+  );
+  const progress = items.length ? Math.round((completedCount / items.length) * 100) : 0;
 
   const handleAdd = async () => {
     if (!newText.trim()) return;
@@ -31,70 +42,84 @@ const TodoList = () => {
     fetchDates();
   };
 
-  const handleKeyDown = (e) => {
-    if (e.key === 'Enter') handleAdd();
-  };
-
   const handleDateChange = async (date) => {
     await setCurrentDate(date);
   };
 
-  const completedCount = items.filter((i) => i.completed).length;
-
   return (
-    <div className="bg-black/60 border-2 border-red-500/70 rounded-lg flex flex-col h-full">
-      {/* Header */}
-      <div className="px-4 pt-4 pb-2 border-b border-red-500/30">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-[10px] uppercase tracking-widest font-bold text-red-400/80">
-            TODOLIST
-          </span>
-          <span className="text-[10px] text-white/30">
-            {completedCount}/{items.length}
-          </span>
-        </div>
-        <DatePickerPopover
-          currentDate={currentDate}
-          onDateChange={handleDateChange}
-          datesWithData={datesWithData}
+    <GlassPanel className="flex h-full min-h-[250px] flex-col overflow-hidden" padded={false}>
+      <div className="px-4 pb-3 pt-4">
+        <PanelHeader
+          eyebrow="Todo"
+          title="任务清单"
+          icon={FaTasks}
+          action={
+            <span className="rounded-full bg-white/10 px-2.5 py-1 text-xs font-semibold text-white/58">
+              {completedCount}/{items.length}
+            </span>
+          }
         />
-        <div className="flex gap-2 mt-3">
+
+        <div className="mt-4">
+          <DatePickerPopover
+            currentDate={currentDate}
+            onDateChange={handleDateChange}
+            datesWithData={datesWithData}
+          />
+        </div>
+
+        <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-white/8">
+          <div
+            className="h-full rounded-full bg-gradient-to-r from-[#7ee7ad] to-[#80bfff] transition-all duration-500"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+
+        <div className="mt-4 flex gap-2">
           <input
             value={newText}
             onChange={(e) => setNewText(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="新任务..."
-            className="flex-1 bg-white/5 border border-red-500/30 rounded-lg px-3 py-1.5 text-xs text-white/80 placeholder-white/30 outline-none focus:bg-white/10 focus:border-red-500/50 transition-all"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleAdd();
+            }}
+            placeholder="添加一个任务"
+            className="min-w-0 flex-1 rounded-2xl border border-white/12 bg-white/8 px-3 py-2 text-sm text-white/82 outline-none placeholder-white/28 transition-all focus:border-[#80bfff]/40 focus:bg-white/12 focus:ring-1 focus:ring-[#80bfff]/18"
           />
           <button
             onClick={handleAdd}
             disabled={!newText.trim()}
-            className="px-3 py-1.5 bg-red-500/80 hover:bg-red-500 disabled:opacity-30 disabled:cursor-not-allowed rounded-lg text-[10px] font-semibold transition-all"
+            className="glass-control flex h-10 w-10 items-center justify-center text-white/70 disabled:opacity-35"
+            title="添加任务"
           >
-            添加
+            <FaPlus size={12} />
           </button>
         </div>
       </div>
 
-      {/* List */}
-      <div className="flex-1 overflow-y-auto glass-scrollbar p-2">
+      <div className="soft-divider" />
+
+      <div className="flex-1 overflow-y-auto p-2 glass-scrollbar">
         {loading ? (
-          <div className="flex items-center justify-center h-full text-white/30 text-xs">加载中...</div>
+          <div className="flex h-full items-center justify-center text-sm text-white/35">
+            加载中...
+          </div>
         ) : items.length === 0 ? (
-          <div className="flex items-center justify-center h-full text-white/20 text-xs">今天还没有任务</div>
+          <EmptyState title="今天还没有任务" icon={FaTasks} />
         ) : (
-          items.map((todo) => (
-            <TodoItem
-              key={todo.id}
-              todo={todo}
-              onToggle={toggleTodo}
-              onDelete={deleteTodo}
-              onUpdate={updateTodo}
-            />
-          ))
+          <div className="space-y-1">
+            {items.map((todo) => (
+              <TodoItem
+                key={todo.id}
+                todo={todo}
+                onToggle={toggleTodo}
+                onDelete={deleteTodo}
+                onUpdate={updateTodo}
+              />
+            ))}
+          </div>
         )}
       </div>
-    </div>
+    </GlassPanel>
   );
 };
 

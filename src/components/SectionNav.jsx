@@ -5,30 +5,34 @@ const SectionNav = ({ activeSection, onToggle }) => {
   const isWidgets = activeSection === 'widgets';
 
   return (
-    <div className="flex items-center justify-center gap-3 mb-6 px-6">
-      <button
-        onClick={onToggle}
-        className="w-8 h-8 rounded-full bg-white/5 backdrop-blur-md border border-white/10 flex items-center justify-center text-white/40 hover:text-white hover:bg-white/15 hover:border-white/30 transition-all duration-300 active:scale-90"
-      >
-        <FaChevronLeft size={11} />
-      </button>
-
-      <div className="flex items-center gap-1.5">
-        <div className={`w-1.5 h-1.5 rounded-full transition-all duration-500 ${
-          isWidgets ? 'bg-white/80 shadow-[0_0_6px_rgba(255,255,255,0.5)]' : 'bg-white/20'
-        }`} />
-        <div className={`w-1.5 h-1.5 rounded-full transition-all duration-500 ${
-          !isWidgets ? 'bg-white/80 shadow-[0_0_6px_rgba(255,255,255,0.5)]' : 'bg-white/20'
-        }`} />
+    <>
+      <div className="pointer-events-none fixed right-5 top-1/2 z-40 hidden -translate-y-1/2 md:block">
+        <button
+          onClick={onToggle}
+          className="pointer-events-auto glass-panel flex h-14 w-14 items-center justify-center rounded-full p-0 text-white/62 transition-all hover:scale-105 hover:text-white"
+          title={isWidgets ? '进入工作区' : '回到组件区'}
+        >
+          {isWidgets ? <FaChevronRight size={15} /> : <FaChevronLeft size={15} />}
+        </button>
       </div>
 
-      <button
-        onClick={onToggle}
-        className="w-8 h-8 rounded-full bg-white/5 backdrop-blur-md border border-white/10 flex items-center justify-center text-white/40 hover:text-white hover:bg-white/15 hover:border-white/30 transition-all duration-300 active:scale-90"
-      >
-        <FaChevronRight size={11} />
-      </button>
-    </div>
+      <div className="mb-5 flex items-center justify-center gap-2 px-6">
+        <button
+          onClick={onToggle}
+          className={`h-2 rounded-full transition-all duration-500 ${
+            isWidgets ? 'w-8 bg-white/78' : 'w-2 bg-white/24 hover:bg-white/42'
+          }`}
+          title="组件区"
+        />
+        <button
+          onClick={onToggle}
+          className={`h-2 rounded-full transition-all duration-500 ${
+            !isWidgets ? 'w-8 bg-white/78' : 'w-2 bg-white/24 hover:bg-white/42'
+          }`}
+          title="工作区"
+        />
+      </div>
+    </>
   );
 };
 

@@ -1,20 +1,20 @@
-import React from "react";
+import React from 'react';
 import {
   DndContext,
-  closestCenter,
   KeyboardSensor,
   PointerSensor,
+  closestCenter,
   useSensor,
   useSensors,
-} from "@dnd-kit/core";
+} from '@dnd-kit/core';
 import {
-  arrayMove,
   SortableContext,
-  sortableKeyboardCoordinates,
+  arrayMove,
   rectSortingStrategy,
-} from "@dnd-kit/sortable";
-import SortableItem from "./SortableItem";
-import { WIDGET_REGISTRY } from "../config/widgetRegistry";
+  sortableKeyboardCoordinates,
+} from '@dnd-kit/sortable';
+import SortableItem from './SortableItem';
+import { WIDGET_REGISTRY } from '../config/widgetRegistry';
 
 const SortableBoard = ({
   items,
@@ -35,35 +35,33 @@ const SortableBoard = ({
     <DndContext
       sensors={sensors}
       collisionDetection={closestCenter}
-      onDragEnd={(e) => {
-        const { active, over } = e;
-        if (active.id !== over?.id) {
-          setItems((items) => {
-            const oldIndex = items.findIndex((i) => i.i === active.id);
-            const newIndex = items.findIndex((i) => i.i === over.id);
-            return arrayMove(items, oldIndex, newIndex);
-          });
-        }
+      onDragEnd={(event) => {
+        const { active, over } = event;
+        if (!over || active.id === over.id) return;
+
+        setItems((currentItems) => {
+          const oldIndex = currentItems.findIndex((item) => item.i === active.id);
+          const newIndex = currentItems.findIndex((item) => item.i === over.id);
+          return arrayMove(currentItems, oldIndex, newIndex);
+        });
       }}
     >
       <SortableContext
-        items={items.map((i) => i.i)}
+        items={items.map((item) => item.i)}
         strategy={rectSortingStrategy}
       >
         <div
           className="grid justify-center"
           style={{
-            // 响应式网格：自适应列数，最小宽度 140px (可以根据需要调小，比如 120)
             gridTemplateColumns: `repeat(auto-fill, minmax(${gridSize}px, 1fr))`,
-            // 自动行高
             gridAutoRows: `${gridSize}px`,
-            // 间距：直接绑定到 margin
             gap: `${margin}px`,
           }}
         >
           {items.map((item) => {
             const config = WIDGET_REGISTRY[item.type];
             if (!config) return null;
+
             return (
               <SortableItem
                 key={item.i}
@@ -80,4 +78,5 @@ const SortableBoard = ({
     </DndContext>
   );
 };
+
 export default SortableBoard;

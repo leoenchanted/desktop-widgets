@@ -1,9 +1,10 @@
 import { create } from 'zustand';
 import { todoApi } from '../api/todoApi';
+import { today } from '../utils/date';
 
 export const useTodoStore = create((set, get) => ({
   items: [],
-  currentDate: new Date().toISOString().slice(0, 10),
+  currentDate: today(),
   loading: false,
   datesWithData: [],
 
@@ -22,7 +23,7 @@ export const useTodoStore = create((set, get) => ({
     try {
       const items = await todoApi.getByDate(date);
       set({ items, loading: false });
-    } catch (err) {
+    } catch {
       set({ loading: false });
     }
   },
@@ -73,6 +74,8 @@ export const useTodoStore = create((set, get) => ({
     try {
       const dates = await todoApi.getAllDates();
       set({ datesWithData: dates });
-    } catch {}
+    } catch (error) {
+      console.error('Failed to fetch todo dates', error);
+    }
   },
 }));

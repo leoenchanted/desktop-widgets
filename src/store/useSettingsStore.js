@@ -1,23 +1,12 @@
 import { create } from 'zustand';
 
-const getStored = (key, fallback) => {
-  try {
-    const v = localStorage.getItem(key);
-    return v !== null ? JSON.parse(v) : fallback;
-  } catch {
-    return fallback;
-  }
-};
+const DEFAULT_BG =
+  'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?ixlib=rb-4.0.3&auto=format&fit=crop&w=2940&q=80';
 
-const setStored = (key, val) => {
-  localStorage.setItem(key, JSON.stringify(val));
-};
-
-export const useSettingsStore = create((set, get) => ({
-  bg: localStorage.getItem('glass_bg') ||
-    'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?ixlib=rb-4.0.3&auto=format&fit=crop&w=2940&q=80',
+export const useSettingsStore = create((set) => ({
+  bg: localStorage.getItem('glass_bg') || DEFAULT_BG,
   username: localStorage.getItem('glass_user') || 'Guest',
-  activeSection: 'widgets', // 'widgets' | 'work'
+  activeSection: localStorage.getItem('glass_section') || 'widgets',
   isEditMode: false,
 
   setBg: (bg) => {
@@ -28,9 +17,14 @@ export const useSettingsStore = create((set, get) => ({
     localStorage.setItem('glass_user', username);
     set({ username });
   },
-  toggleSection: () => set((s) => ({
-    activeSection: s.activeSection === 'widgets' ? 'work' : 'widgets',
-  })),
-  setSection: (section) => set({ activeSection: section }),
-  toggleEditMode: () => set((s) => ({ isEditMode: !s.isEditMode })),
+  toggleSection: () => set((state) => {
+    const activeSection = state.activeSection === 'widgets' ? 'work' : 'widgets';
+    localStorage.setItem('glass_section', activeSection);
+    return { activeSection };
+  }),
+  setSection: (activeSection) => {
+    localStorage.setItem('glass_section', activeSection);
+    set({ activeSection });
+  },
+  toggleEditMode: () => set((state) => ({ isEditMode: !state.isEditMode })),
 }));

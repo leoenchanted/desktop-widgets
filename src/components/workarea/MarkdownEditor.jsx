@@ -1,34 +1,73 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { FaCheck, FaEye, FaPenNib, FaRegClock } from 'react-icons/fa';
 import { useMarkdownStore } from '../../store/useMarkdownStore';
 import { useDebounce } from '../../hooks/useDebounce';
 import MarkdownPreview from './MarkdownPreview';
 import StatsBar from './StatsBar';
+import GlassPanel from '../ui/GlassPanel';
+import PanelHeader from '../ui/PanelHeader';
+import SegmentedControl from '../ui/SegmentedControl';
+import StatusPill from '../ui/StatusPill';
 
 const MarkdownEditor = () => {
-  const { content, wordCount, charCount, loading, setContent, saveContent, fetchContent, currentDate } = useMarkdownStore();
+  const {
+    content,
+    wordCount,
+    charCount,
+    loading,
+    setContent,
+    saveContent,
+    fetchContent,
+    currentDate,
+  } = useMarkdownStore();
   const debouncedContent = useDebounce(content, 500);
-  const [preview, setPreview] = useState(false);
+  const [mode, setMode] = useState('edit');
+  const [saveState, setSaveState] = useState('idle');
   const textareaRef = useRef(null);
-  const prevDateRef = useRef(currentDate);
+  const hasEditedRef = useRef(false);
 
-  // Load content when date changes
   useEffect(() => {
-    if (prevDateRef.current !== currentDate) {
-      prevDateRef.current = currentDate;
-      fetchContent(currentDate);
-    } else if (prevDateRef.current === currentDate && !content) {
-      fetchContent(currentDate);
-    }
-  }, [currentDate]);
+    hasEditedRef.current = false;
+    fetchContent(currentDate);
+  }, [currentDate, fetchContent]);
 
-  // Auto-save on debounce
   useEffect(() => {
-    if (debouncedContent) {
-      saveContent();
-    }
-  }, [debouncedContent]);
+    if (!hasEditedRef.current || loading) return;
 
-  // Handle tab in textarea
+    let cancelled = false;
+    saveContent()
+      .then(() => {
+        if (!cancelled) setSaveState('saved');
+      })
+      .catch(() => {
+        if (!cancelled) setSaveState('error');
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [debouncedContent, loading, saveContent]);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        hasEditedRef.current = true;
+        setSaveState('saving');
+        saveContent()
+          .then(() => setSaveState('saved'))
+          .catch(() => setSaveState('error'));
+      }
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [saveContent]);
+
+  const handleChange = (value) => {
+    hasEditedRef.current = true;
+    setContent(value);
+  };
+
   const handleKeyDown = (e) => {
     if (e.key === 'Tab') {
       e.preventDefault();
@@ -36,61 +75,96 @@ const MarkdownEditor = () => {
       if (!ta) return;
       const start = ta.selectionStart;
       const end = ta.selectionEnd;
-      const newVal = content.slice(0, start) + '  ' + content.slice(end);
-      setContent(newVal);
+      const nextValue = content.slice(0, start) + '  ' + content.slice(end);
+      handleChange(nextValue);
       requestAnimationFrame(() => {
         ta.selectionStart = ta.selectionEnd = start + 2;
       });
     }
   };
 
+  const status =
+    saveState === 'saving'
+      ? '保存中'
+      : saveState === 'error'
+        ? '保存失败'
+        : saveState === 'saved'
+          ? '已保存'
+          : '就绪';
+
   return (
-    <div className="bg-black/60 border-2 border-red-500/70 rounded-lg flex flex-col h-full overflow-hidden">
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 pt-4 pb-2 border-b border-red-500/30">
-        <span className="text-[10px] uppercase tracking-widest font-bold text-red-400/80">
-          MARKDOWN
-        </span>
-        <div className="flex gap-2">
-          <button
-            onClick={() => setPreview(!preview)}
-            className={`px-2.5 py-1 rounded text-[10px] font-semibold transition-all ${
-              preview
-                ? 'bg-red-500/80 text-white'
-                : 'bg-white/10 text-white/50 hover:bg-white/20'
-            }`}
-          >
-            {preview ? '编辑' : '预览'}
-          </button>
-        </div>
+    <GlassPanel className="flex h-full min-h-[620px] flex-col overflow-hidden" padded={false}>
+      <div className="px-5 pb-3 pt-5">
+        <PanelHeader
+          eyebrow="Markdown"
+          title="日记与草稿"
+          icon={FaPenNib}
+          action={
+            <div className="flex items-center gap-2">
+              <StatusPill variant={saveState === 'error' ? 'warning' : 'success'}>
+                {saveState === 'saved' && <FaCheck className="mr-1.5" size={10} />}
+                {status}
+              </StatusPill>
+              <SegmentedControl
+                value={mode}
+                onChange={setMode}
+                options={[
+                  { value: 'edit', label: '编辑' },
+                  { value: 'preview', label: '预览' },
+                ]}
+              />
+            </div>
+          }
+        />
       </div>
 
-      {/* Editor / Preview */}
-      <div className="flex-1 overflow-y-auto glass-scrollbar relative">
+      <div className="soft-divider" />
+
+      <div className="relative flex-1 overflow-hidden">
         {loading ? (
-          <div className="flex items-center justify-center h-full text-white/30 text-xs">加载中...</div>
-        ) : preview ? (
-          <div className="p-4">
-            <MarkdownPreview content={content} />
+          <div className="flex h-full items-center justify-center text-sm text-white/35">
+            加载中...
+          </div>
+        ) : mode === 'preview' ? (
+          <div className="h-full overflow-y-auto p-4 glass-scrollbar md:p-6">
+            {content ? (
+              <div className="markdown-paper min-h-full p-5 md:p-7">
+                <MarkdownPreview content={content} />
+              </div>
+            ) : (
+              <div className="flex h-full flex-col items-center justify-center text-white/30">
+                <FaEye className="mb-3" size={18} />
+                <span className="text-sm">没有可预览内容</span>
+              </div>
+            )}
           </div>
         ) : (
           <textarea
             ref={textareaRef}
             value={content}
-            onChange={(e) => setContent(e.target.value)}
+            onChange={(e) => handleChange(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="开始写点什么..."
-            className="w-full h-full min-h-[250px] bg-transparent text-sm text-white/80 placeholder-white/20 resize-none outline-none p-4 font-mono leading-relaxed"
+            placeholder="写下今天的想法、计划或复盘..."
+            className="h-full w-full resize-none bg-transparent p-6 text-[15px] leading-8 text-white/86 outline-none placeholder-white/26 glass-scrollbar selection:bg-[#80bfff]/30 md:text-base"
             spellCheck={false}
           />
         )}
       </div>
 
-      {/* Stats */}
-      <div className="px-4 py-2 border-t border-red-500/30">
-        <StatsBar charCount={charCount} wordCount={wordCount} />
+      <div className="soft-divider" />
+      <div className="px-5 py-3">
+        <StatsBar
+          charCount={charCount}
+          wordCount={wordCount}
+          extra={
+            <span className="flex items-center gap-1.5">
+              <FaRegClock size={10} />
+              {currentDate}
+            </span>
+          }
+        />
       </div>
-    </div>
+    </GlassPanel>
   );
 };
 

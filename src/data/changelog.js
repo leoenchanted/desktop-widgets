@@ -1,6 +1,17 @@
 export const CHANGELOG = [
   {
     date: '2026-05-19',
+    title: 'PWA 标题栏融合修正',
+    summary: '优化桌面 PWA 的 Window Controls Overlay 适配，让内容更贴近窗口顶边并避开系统按钮。',
+    items: [
+      'Manifest 增加 controls-only 偏好配置，支持时只保留窗口控制按钮。',
+      '新增运行时 WCO 检测，监听标题栏几何变化并写入布局变量。',
+      'Header 不再被 titlebar 高度整体推下去，改为只给右上角窗口按钮区域留出安全距离。',
+      'Service Worker 缓存版本升级，减少旧 manifest 配置残留。',
+    ],
+  },
+  {
+    date: '2026-05-19',
     title: '组件默认尺寸修正',
     summary: '修正旧默认布局小于组件最小尺寸的问题，避免用户放大后无法缩回到预期大小。',
     items: [

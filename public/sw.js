@@ -1,4 +1,4 @@
-const CACHE_NAME = 'desktop-widgets-shell-v1';
+const CACHE_NAME = 'desktop-widgets-shell-v2';
 const SHELL_ASSETS = [
   '/',
   '/manifest.webmanifest',

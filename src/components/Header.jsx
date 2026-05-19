@@ -28,6 +28,7 @@ const Header = ({ onTogglePicker, onOpenWallpaper, showPicker }) => {
 
   return (
     <header className="app-header mx-auto grid w-full max-w-[1680px] grid-cols-[minmax(0,1fr)_auto] gap-4 px-5 pb-4 pt-[calc(env(safe-area-inset-top)+1.25rem)] md:grid-cols-[minmax(0,1fr)_minmax(260px,340px)_minmax(0,1fr)] md:items-end md:gap-6 md:px-8 md:pb-6 md:pt-7">
+      <div className="titlebar-drag-zone" aria-hidden="true" />
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-3 text-sm font-semibold text-white/58">
           <span className="rounded-full border border-white/10 bg-white/7 px-3 py-1">
@@ -52,7 +53,7 @@ const Header = ({ onTogglePicker, onOpenWallpaper, showPicker }) => {
         <AmbientPlayer className="max-w-[340px]" />
       </div>
 
-      <div className="col-start-2 row-start-1 flex items-center justify-end gap-3 md:col-start-3 md:row-start-1 md:pb-1">
+      <div className="app-header-actions col-start-2 row-start-1 flex items-center justify-end gap-3 md:col-start-3 md:row-start-1 md:pb-1">
         <IconButton
           icon={isEditMode ? FaCheck : FaCog}
           onClick={toggleEditMode}

@@ -105,6 +105,10 @@ npm run start
 - 固定按钮、备份提醒、编辑浮层要考虑 `safe-area-inset-*`，避免被 iOS 底部 Home Indicator 或顶部状态栏挡住。
 - 移动端优先保证查看和轻量编辑，不要把桌面端密集工具条原样塞进窄屏。
 - PWA 尽量使用沉浸式配置：`viewport-fit=cover`、透明状态栏、`display_override: ["window-controls-overlay", "standalone"]`。注意网页不能强制隐藏所有系统状态栏/窗口按钮，只能请求浏览器支持的显示模式。
+- 桌面 PWA 的标题栏融合使用 Window Controls Overlay：manifest 保留 `display_override`，并可加 `window-controls-overlay.preferred_overlay = "controls-only"` 作为浏览器支持时的增强。
+- 不要再用 `env(titlebar-area-height)` 给整个页面或 Header 增加顶部 padding；应该用 `navigator.windowControlsOverlay` 的几何信息给右上角窗口按钮留安全区，并保留透明拖拽区域。
+- WCO 相关运行时状态在 `src/hooks/useWindowControlsOverlay.js`，样式在 `src/styles/glass.css`。修改后需要 bump `public/sw.js` 的缓存名，减少旧 manifest/service worker 残留。
+- PWA manifest 显示模式变化后，用户本机已安装的旧 PWA 可能需要卸载并重新安装才会完全生效。
 
 ## 环境音控制器
 

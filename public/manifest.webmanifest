@@ -6,6 +6,9 @@
   "scope": "/",
   "display": "standalone",
   "display_override": ["window-controls-overlay", "standalone"],
+  "window-controls-overlay": {
+    "preferred_overlay": "controls-only"
+  },
   "background_color": "#0a0f18",
   "theme_color": "#0a0f18",
   "orientation": "portrait-primary",

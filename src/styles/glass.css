@@ -16,6 +16,11 @@
   --danger: #ff9b9b;
   --panel-radius: 18px;
   --control-radius: 11px;
+  --wco-titlebar-height: env(titlebar-area-height, 0px);
+  --wco-titlebar-width: env(titlebar-area-width, 100vw);
+  --wco-titlebar-x: env(titlebar-area-x, 0px);
+  --wco-titlebar-y: env(titlebar-area-y, 0px);
+  --wco-control-inset-end: max(0px, calc(100vw - var(--wco-titlebar-x) - var(--wco-titlebar-width)));
 }
 
 .app-shell {
@@ -52,9 +57,22 @@
   opacity: 0.42;
 }
 
+.app-header {
+  position: relative;
+  z-index: 20;
+}
+
+.titlebar-drag-zone {
+  display: none;
+}
+
 @media (display-mode: window-controls-overlay) {
-  .app-header {
-    padding-top: calc(env(titlebar-area-height, 0px) + 1.1rem);
+  html[data-wco-visible="true"] .app-header {
+    padding-top: max(0.72rem, env(safe-area-inset-top));
+  }
+
+  html[data-wco-visible="true"] .app-header-actions {
+    padding-inline-end: calc(var(--wco-control-inset-end) + 0.5rem);
   }
 }
 
@@ -63,8 +81,23 @@
     -webkit-app-region: drag;
   }
 
+  html[data-wco-visible="true"] .titlebar-drag-zone {
+    display: block;
+    height: max(32px, var(--wco-titlebar-height));
+    inset-block-start: var(--wco-titlebar-y);
+    inset-inline-start: var(--wco-titlebar-x);
+    position: fixed;
+    width: var(--wco-titlebar-width);
+    z-index: 12;
+    -webkit-app-region: drag;
+  }
+
+  .app-header-actions,
   .app-header button,
   .app-header input,
+  .app-header select,
+  .app-header textarea,
+  .app-header a,
   .ambient-player-panel {
     -webkit-app-region: no-drag;
   }

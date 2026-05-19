@@ -12,6 +12,7 @@ import ChangelogPanel from './components/ChangelogPanel';
 import WallpaperPanel from './components/WallpaperPanel';
 import { useSettingsStore } from './store/useSettingsStore';
 import { useCommandPalette } from './hooks/useCommandPalette';
+import { useWindowControlsOverlay } from './hooks/useWindowControlsOverlay';
 import WorkArea from './components/workarea/WorkArea';
 import IconButton from './components/ui/IconButton';
 import { WIDGET_REGISTRY, normalizeWidgetLayout } from './config/widgetRegistry';
@@ -79,6 +80,7 @@ function App() {
     initializeSettings,
   } = useSettingsStore();
   const cmdPalette = useCommandPalette();
+  useWindowControlsOverlay();
 
   useEffect(() => {
     let cancelled = false;

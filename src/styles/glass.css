@@ -19,8 +19,9 @@
 }
 
 .app-shell {
-  min-height: 100vh;
+  min-height: 100svh;
   position: relative;
+  padding-bottom: max(6rem, calc(env(safe-area-inset-bottom) + 5rem));
   background:
     linear-gradient(180deg, rgba(6, 8, 12, 0.18), rgba(6, 8, 12, 0.72)),
     linear-gradient(115deg, rgba(156, 201, 255, 0.08), rgba(241, 207, 117, 0.045) 42%, rgba(154, 233, 189, 0.055));
@@ -160,6 +161,76 @@
   box-shadow: 0 0 0 1px rgba(128, 191, 255, 0.36), 0 0 32px rgba(77, 163, 255, 0.16);
 }
 
+.ambient-player-panel {
+  box-shadow:
+    0 16px 42px rgba(0, 0, 0, 0.18),
+    inset 0 1px 0 rgba(250, 247, 239, 0.14);
+}
+
+.ambient-bar {
+  animation: ambientPulse 920ms ease-in-out infinite;
+  transform-origin: center;
+}
+
+.ambient-volume {
+  --ambient-level: 36%;
+  appearance: none;
+  background: transparent;
+  height: 1.5rem;
+}
+
+.ambient-volume::-webkit-slider-runnable-track {
+  background:
+    linear-gradient(90deg, rgba(156, 201, 255, 0.88) var(--ambient-level), rgba(255, 255, 255, 0.16) var(--ambient-level));
+  border-radius: 999px;
+  height: 3px;
+}
+
+.ambient-volume::-webkit-slider-thumb {
+  appearance: none;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(156, 201, 255, 0.48);
+  border-radius: 999px;
+  box-shadow: 0 0 0 4px rgba(156, 201, 255, 0.12);
+  height: 12px;
+  margin-top: -4.5px;
+  width: 12px;
+}
+
+.ambient-volume::-moz-range-track {
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  height: 3px;
+}
+
+.ambient-volume::-moz-range-progress {
+  background: rgba(156, 201, 255, 0.88);
+  border-radius: 999px;
+  height: 3px;
+}
+
+.ambient-volume::-moz-range-thumb {
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(156, 201, 255, 0.48);
+  border-radius: 999px;
+  box-shadow: 0 0 0 4px rgba(156, 201, 255, 0.12);
+  height: 12px;
+  width: 12px;
+}
+
+@keyframes ambientPulse {
+  0%,
+  100% {
+    transform: scaleY(0.58);
+    opacity: 0.48;
+  }
+
+  50% {
+    transform: scaleY(1.25);
+    opacity: 1;
+  }
+}
+
 .custom-scrollbar::-webkit-scrollbar,
 .glass-scrollbar::-webkit-scrollbar {
   width: 6px;
@@ -217,6 +288,12 @@
 
   .workspace-grid {
     gap: 12px;
+  }
+
+  .glass-panel {
+    box-shadow:
+      0 12px 30px rgba(0, 0, 0, 0.18),
+      inset 0 1px 0 rgba(250, 247, 239, 0.11);
   }
 
   .workspace-stack {

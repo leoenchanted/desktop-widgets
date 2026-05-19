@@ -3,6 +3,7 @@ import { FaCheck, FaCog, FaPlus } from 'react-icons/fa';
 import { useSettingsStore } from '../store/useSettingsStore';
 import IconButton from './ui/IconButton';
 import { formatDate } from '../utils/date';
+import AmbientPlayer from './AmbientPlayer';
 
 const pad = (value) => String(value).padStart(2, '0');
 
@@ -26,7 +27,7 @@ const Header = ({ onTogglePicker, showPicker }) => {
   const dateKey = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
 
   return (
-    <header className="mx-auto flex w-full max-w-[1680px] flex-col gap-5 px-5 pb-6 pt-7 md:flex-row md:items-end md:justify-between md:px-8">
+    <header className="mx-auto grid w-full max-w-[1680px] grid-cols-[minmax(0,1fr)_auto] gap-4 px-5 pb-4 pt-[calc(env(safe-area-inset-top)+1.25rem)] md:grid-cols-[minmax(0,1fr)_minmax(260px,340px)_minmax(0,1fr)] md:items-end md:gap-6 md:px-8 md:pb-6 md:pt-7">
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-3 text-sm font-semibold text-white/58">
           <span className="rounded-full border border-white/10 bg-white/7 px-3 py-1">
@@ -47,7 +48,11 @@ const Header = ({ onTogglePicker, showPicker }) => {
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="col-span-2 row-start-2 flex justify-center md:col-span-1 md:col-start-2 md:row-start-1 md:pb-1">
+        <AmbientPlayer className="max-w-[340px]" />
+      </div>
+
+      <div className="col-start-2 row-start-1 flex items-center justify-end gap-3 md:col-start-3 md:row-start-1 md:pb-1">
         <IconButton
           icon={isEditMode ? FaCheck : FaCog}
           onClick={toggleEditMode}

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   DndContext,
   KeyboardSensor,
@@ -24,12 +24,21 @@ const SortableBoard = ({
   gridSize,
   isEditMode,
 }) => {
+  const [isCompact, setIsCompact] = useState(() => window.innerWidth <= 720);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     }),
   );
+  const actualGridSize = isCompact ? 112 : gridSize;
+  const actualMargin = isCompact ? 14 : margin;
+
+  useEffect(() => {
+    const handleResize = () => setIsCompact(window.innerWidth <= 720);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   return (
     <DndContext
@@ -53,9 +62,9 @@ const SortableBoard = ({
         <div
           className="grid justify-center"
           style={{
-            gridTemplateColumns: `repeat(auto-fill, minmax(${gridSize}px, 1fr))`,
-            gridAutoRows: `${gridSize}px`,
-            gap: `${margin}px`,
+            gridTemplateColumns: `repeat(auto-fill, minmax(${actualGridSize}px, 1fr))`,
+            gridAutoRows: `${actualGridSize}px`,
+            gap: `${actualMargin}px`,
           }}
         >
           {items.map((item) => {
@@ -69,6 +78,7 @@ const SortableBoard = ({
                 widget={item}
                 component={config.component}
                 isEditMode={isEditMode}
+                isCompact={isCompact}
                 onRemove={onRemoveItem}
               />
             );

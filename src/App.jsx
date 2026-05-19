@@ -265,7 +265,7 @@ function App() {
       <Layout widgetBoard={widgetBoard} workArea={<WorkArea />} />
 
       {isEditMode && (
-        <div className="glass-panel fixed bottom-8 left-1/2 z-40 flex w-[min(92vw,760px)] -translate-x-1/2 flex-wrap items-end justify-center gap-4 px-5 py-4 shadow-2xl animate-fade-in">
+        <div className="glass-panel fixed bottom-[calc(env(safe-area-inset-bottom)+1.25rem)] left-1/2 z-40 flex w-[min(92vw,760px)] -translate-x-1/2 flex-wrap items-end justify-center gap-4 px-5 py-4 shadow-2xl animate-fade-in md:bottom-8">
           <div className="min-w-[260px] flex-1">
             <label className="mb-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.16em] text-white/42">
               <FaImage />
@@ -353,7 +353,7 @@ function App() {
       )}
 
       {!cmdPalette.isOpen && (
-        <div className="fixed bottom-6 right-6 z-30 flex flex-col gap-3">
+        <div className="fixed bottom-[calc(env(safe-area-inset-bottom)+1rem)] right-5 z-30 flex flex-col gap-3 md:right-6">
           <IconButton
             icon={FaHistory}
             onClick={() => setShowChangelog(true)}

@@ -52,7 +52,7 @@ const BackupReminder = ({ onOpenBackup }) => {
   };
 
   return (
-    <div className="fixed bottom-24 left-4 z-40 w-[min(92vw,360px)] animate-bubble md:bottom-6 md:left-6">
+    <div className="fixed bottom-[calc(env(safe-area-inset-bottom)+6rem)] left-4 z-40 w-[min(92vw,360px)] animate-bubble md:bottom-6 md:left-6">
       <div className="glass-panel overflow-hidden p-4 shadow-2xl">
         <div className="flex items-start gap-3">
           <span className="mt-0.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl border border-[#9ae9bd]/20 bg-[#9ae9bd]/12 text-[#c8f7db]">

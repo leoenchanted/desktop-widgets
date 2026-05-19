@@ -1,7 +1,22 @@
 import React from 'react';
-import { FaChevronLeft, FaChevronRight } from 'react-icons/fa';
+import { FaChevronLeft, FaChevronRight, FaTasks, FaThLarge } from 'react-icons/fa';
 
-const SectionNav = ({ activeSection, onToggle }) => {
+const MobileTab = ({ active, icon: Icon, label, onClick }) => (
+  <button
+    onClick={onClick}
+    aria-pressed={active}
+    className={`flex h-11 items-center justify-center gap-2 rounded-xl text-sm font-semibold transition-all ${
+      active
+        ? 'bg-white/16 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.16)]'
+        : 'text-white/48 hover:bg-white/8 hover:text-white/72'
+    }`}
+  >
+    <Icon size={13} />
+    {label}
+  </button>
+);
+
+const SectionNav = ({ activeSection, onToggle, onSetSection }) => {
   const isWidgets = activeSection === 'widgets';
 
   return (
@@ -16,16 +31,33 @@ const SectionNav = ({ activeSection, onToggle }) => {
         </button>
       </div>
 
-      <div className="mb-5 flex items-center justify-center gap-2 px-6">
+      <div className="sticky top-3 z-30 mb-4 px-4 md:hidden">
+        <div className="glass-panel mx-auto grid max-w-sm grid-cols-2 gap-1 p-1 shadow-2xl">
+          <MobileTab
+            active={isWidgets}
+            icon={FaThLarge}
+            label="组件区"
+            onClick={() => onSetSection('widgets')}
+          />
+          <MobileTab
+            active={!isWidgets}
+            icon={FaTasks}
+            label="工作区"
+            onClick={() => onSetSection('work')}
+          />
+        </div>
+      </div>
+
+      <div className="mb-5 hidden items-center justify-center gap-2 px-6 md:flex">
         <button
-          onClick={onToggle}
+          onClick={() => onSetSection('widgets')}
           className={`h-2 rounded-full transition-all duration-500 ${
             isWidgets ? 'w-8 bg-white/78' : 'w-2 bg-white/24 hover:bg-white/42'
           }`}
           title="组件区"
         />
         <button
-          onClick={onToggle}
+          onClick={() => onSetSection('work')}
           className={`h-2 rounded-full transition-all duration-500 ${
             !isWidgets ? 'w-8 bg-white/78' : 'w-2 bg-white/24 hover:bg-white/42'
           }`}

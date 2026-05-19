@@ -64,6 +64,7 @@ npm run start
 - 不要使用紫色渐变、装饰光球、漂浮圆点、通用 AI 风背景。
 - 不要做卡片套卡片。只有重复项、弹窗、工具面板可以像卡片。
 - 紧凑操作优先用图标按钮，并加 `title` 提示。
+- 移动端必须保留清晰的“组件区 / 工作区”切换入口，不能只依赖桌面端右侧箭头。
 
 重要样式文件：
 
@@ -84,6 +85,61 @@ npm run start
 - `EmptyState.jsx`
 
 新增 UI 时优先复用这些组件，不要到处写一套新的 `bg-white/10 border rounded`。
+
+## 移动端与 PWA
+
+项目需要支持手机访问，目标是接近轻量 PWA：
+
+- PWA 配置：`public/manifest.webmanifest`
+- PWA 图标：`public/pwa-icon.svg`
+- Service Worker：`public/sw.js`
+- 注册入口：`src/main.jsx`
+- 移动端区域切换：`src/components/SectionNav.jsx`
+
+移动端规则：
+
+- `SectionNav` 在移动端必须显示明确的双按钮分段控件：组件区 / 工作区。
+- 组件区网格在移动端要压缩间距和单元尺寸，避免横跨 3 格的小组件撑出横向滚动。
+- 固定按钮、备份提醒、编辑浮层要考虑 `safe-area-inset-*`，避免被 iOS 底部 Home Indicator 或顶部状态栏挡住。
+- 移动端优先保证查看和轻量编辑，不要把桌面端密集工具条原样塞进窄屏。
+
+## 环境音控制器
+
+环境音组件是 `src/components/AmbientPlayer.jsx`，它不是音乐播放器。它应该作为 Header 的中间紧凑控件出现，位于时间/用户名区域和设置/添加按钮之间，并且保持页面几何居中，不要做成脱离布局的 fixed 悬浮层：
+
+- 不显示播放进度。
+- 不显示时长。
+- 不支持拖动进度。
+- 只保留环境音选择、播放/暂停、音量、静音和播放状态。
+
+环境音配置：
+
+- 声音列表：`src/data/ambientSounds.js`
+- 白噪音、粉噪音、棕噪音：用 Web Audio API 在浏览器实时生成，不需要音频文件。
+- 雨声、海浪、风暴：读取本地短循环音频文件。
+
+本地音频文件位置：
+
+```text
+public/audio/ambient/rain.mp3
+public/audio/ambient/ocean.mp3
+public/audio/ambient/storm.mp3
+```
+
+文件规则：
+
+- 优先使用 20-90 秒左右的可循环环境音。
+- 文件名必须和 `src/data/ambientSounds.js` 中的 `fileName` 对应。
+- 不要默认热链第三方音频 URL，避免 CORS、失效、版权和 PWA 离线问题。
+- 如果新增音频类型，先更新 `src/data/ambientSounds.js`，再补充本节说明。
+
+IndexedDB settings 字段：
+
+- `ambientSound`：当前环境音 ID。
+- `ambientVolume`：音量，范围 0-1。
+- `ambientMuted`：是否静音。
+
+不要保存 `isPlaying`，避免用户打开页面时自动出声；浏览器移动端也通常要求用户手动触发播放。
 
 ## 数据规则
 

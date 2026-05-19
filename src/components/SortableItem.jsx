@@ -8,6 +8,7 @@ const SortableItem = ({
   widget,
   component: Component,
   isEditMode,
+  isCompact,
   onRemove,
 }) => {
   const {
@@ -26,8 +27,8 @@ const SortableItem = ({
     transition: isDragging
       ? 'none'
       : 'transform 0.36s cubic-bezier(0.25, 1, 0.5, 1), box-shadow 0.24s ease, border-color 0.24s ease',
-    gridColumn: `span ${widget.w}`,
-    gridRow: `span ${widget.h}`,
+    gridColumn: `span ${isCompact ? Math.min(widget.w, 2) : widget.w}`,
+    gridRow: `span ${isCompact ? Math.min(widget.h, 2) : widget.h}`,
     zIndex: isDragging ? 999 : 'auto',
   };
 

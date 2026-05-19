@@ -8,7 +8,8 @@
 
 - 组件区：类似手机桌面小组件，可以拖拽、排序、添加组件。
 - 工作区：Markdown 笔记、TodoList、番茄钟、每日回顾、备份导入、命令面板。
-- 本地后端：用 Node.js/Express 在本机保存数据，不依赖联网服务。
+- 浏览器本地数据：面向部署到域名后的自用/分享场景，用户数据默认保存在访问者自己的浏览器 IndexedDB 中。
+- 本地后端：Express/sql.js 作为历史本机模式和旧数据迁移能力保留，不再作为新功能的首选数据层。
 
 后续所有改动都应该服务于“本地桌面工作台”这个方向，而不是做成通用后台管理系统或营销网页。
 
@@ -18,9 +19,11 @@
 - 拖拽：`@dnd-kit`。
 - 图标：`react-icons`。
 - Markdown：`marked` + 本地 HTML 清理函数。
-- 后端：Express。
-- 本地数据库：`sql.js`，数据文件在 `server/data/widgets.db`。
-- 本地壁纸文件：`server/data/wallpapers`。
+- 浏览器数据库：IndexedDB，封装在 `src/data/localDb.js`。
+- 浏览器持久化：启动时通过 Storage Persistence API 申请持久化存储。
+- 后端：Express，仅作为本机旧数据迁移和兼容层。
+- 历史本地数据库：`sql.js`，数据文件在 `server/data/widgets.db`。
+- 历史本地壁纸文件：`server/data/wallpapers`。
 
 常用命令：
 
@@ -32,13 +35,19 @@ npm run lint
 npm run build
 ```
 
-日常使用优先运行：
+日常开发优先运行：
+
+```bash
+npm run dev
+```
+
+因为核心数据现在在浏览器 IndexedDB。需要迁移旧 Express/sql.js 数据时再运行：
 
 ```bash
 npm run start
 ```
 
-因为它会同时启动本地后端和 Vite 前端。
+它会同时启动本地后端和 Vite 前端，前端会尝试从 `/api/backup/export` 做一次旧数据迁移。
 
 ## 视觉方向
 
@@ -78,16 +87,28 @@ npm run start
 
 ## 数据规则
 
-生产力数据由本地后端负责：
+生产力数据由浏览器 IndexedDB 负责。核心封装：
 
-- Todo：`server/routes/todos.js`
-- Markdown：`server/routes/markdown.js`
-- 每日回顾：`server/routes/reviews.js`
-- 番茄钟：`server/routes/pomodoro.js`
-- 备份导入：`server/routes/backup.js`
-- 壁纸文件：`server/routes/wallpaper.js`
+- 数据库封装：`src/data/localDb.js`
+- 旧数据迁移：`src/data/migrations.js`
+- Todo：`src/api/todoApi.js`
+- Markdown：`src/api/markdownApi.js`
+- 每日回顾：`src/api/reviewApi.js`
+- 番茄钟：`src/api/pomodoroApi.js`
+- 备份导入：`src/api/backupApi.js`
+- 壁纸/图片资产：`src/api/wallpaperApi.js`
 
-仍在 `localStorage` 的旧数据：
+IndexedDB stores：
+
+- `settings`：应用设置，例如用户名、当前分区、壁纸类型、持久化存储状态、备份提醒时间。
+- `widgets`：组件布局和组件实例配置，例如 `layout`、`image:<widgetId>`。
+- `todos`：任务清单，按 `date` 建索引。
+- `markdown_entries`：Markdown 草稿；长期草稿固定使用 `date = "workspace"`。
+- `daily_reviews`：每日回顾，按日期保存当天汇总和手写备注。
+- `pomodoro_sessions`：番茄钟完成记录，按 `date` 建索引。
+- `assets`：本地图片/壁纸 Blob，按 `type` 建索引。
+
+`localStorage` 只作为旧数据迁移来源：
 
 - `glass_items`
 - `glass_bg`
@@ -95,7 +116,9 @@ npm run start
 - `glass_section`
 - `glass_sign`
 
-后续升级重点：把组件布局、应用设置、组件私有配置迁移进后端数据库，让备份/导入能覆盖完整数据。
+不要再把新功能的数据写入 `localStorage`，除非只是读取旧值并迁移到 IndexedDB。
+
+后续升级重点：继续完善组件私有配置，让每个组件实例的数据都能进入 IndexedDB 和完整备份。
 
 日期必须使用 `src/utils/date.js` 里的本地日期工具。不要用：
 
@@ -133,16 +156,53 @@ Markdown 相关文件：
 壁纸支持：
 
 - 图片 URL。
-- 本地图片上传到 Express 后端。
-- 如果后端上传失败，回退到浏览器 data URL。
+- 本地图片上传后存入 IndexedDB 的 `assets` store。
+- 上传图片会做高质量压缩：只在图片过大或体积过大时缩放到最长边 2560px，编码质量保持较高，避免明显损失画质。
+- 如果 IndexedDB 保存失败，回退到浏览器 data URL。
 
 相关文件：
 
 - `src/App.jsx`
 - `src/api/wallpaperApi.js`
-- `server/routes/wallpaper.js`
+- `src/utils/imageCompression.js`
 
-不要随意删掉 fallback，除非确认本地后端永远可用。
+不要随意删掉 fallback，除非确认 IndexedDB 和浏览器文件能力永远可用。
+
+## 备份格式
+
+完整备份由前端导出 JSON，文件名类似：
+
+```text
+desktop-widgets-backup-YYYY-MM-DD.json
+```
+
+当前格式：
+
+```json
+{
+  "version": 2,
+  "app": "desktop-widgets",
+  "storage": "indexeddb",
+  "exportedAt": "2026-05-19T00:00:00.000Z",
+  "data": {
+    "settings": [],
+    "widgets": [],
+    "todos": [],
+    "markdown_entries": [],
+    "daily_reviews": [],
+    "pomodoro_sessions": [],
+    "assets": []
+  }
+}
+```
+
+`assets` 导出时会把 Blob 转成 `dataUrl`，导入时再转回 Blob 存进 IndexedDB。修改备份格式时必须提高 `version`，并在导入逻辑里兼容旧格式。
+
+备份提醒规则：
+
+- 设置项 `lastBackupAt` 记录最近一次导出时间。
+- 超过 7 天未导出时，前端显示备份提醒。
+- 设置项 `backupReminderSnoozedAt` 记录当天稍后提醒。
 
 ## 验证要求
 
@@ -164,10 +224,10 @@ npm run build
 
 建议优先做：
 
-1. 把组件布局和应用设置从 `localStorage` 迁移到后端数据库。
-2. 让每个组件实例都有自己的持久化配置，例如图片组件、星座组件。
-3. 给备份导入加版本迁移、导入前预览和二次确认。
-4. 把工作区右下角的“灵感暂存”升级成真正的便签/快速记录模块。
+1. 给备份导入加版本迁移、导入前预览和二次确认。
+2. 继续让每个组件实例都有自己的持久化配置，例如星座组件的实例级配置。
+3. 把工作区右下角的“灵感暂存”升级成真正的便签/快速记录模块。
+4. 增加 IndexedDB 使用量可视化，提示用户及时导出大体积资源。
 5. 在桌面端视觉稳定后，再系统优化移动端响应式布局。
 
 ## 修改约束
@@ -177,4 +237,5 @@ npm run build
 - 不要为了 API routes 轻易迁移到 Next.js。
 - 保持本地优先、离线友好。
 - 核心日常功能不要依赖联网服务。
+- 域名部署场景下，用户数据必须留在用户自己的浏览器本地，不要默认上传到远程服务。
 - UI 改动默认延续 Apple 风格玻璃工作台方向，除非用户明确要求换视觉语言。

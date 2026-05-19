@@ -1,17 +1,21 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { FaDownload, FaFileUpload, FaImage, FaKeyboard } from 'react-icons/fa';
+import { FaDownload, FaFileUpload, FaHistory, FaImage, FaKeyboard } from 'react-icons/fa';
 import SortableBoard from './components/SortableBoard';
 import WidgetPicker from './components/WidgetPicker';
 import Header from './components/Header';
 import Layout from './components/Layout';
 import CommandPalette from './components/CommandPalette';
 import ExportImportPanel from './components/ExportImportPanel';
+import BackupReminder from './components/BackupReminder';
+import ChangelogPanel from './components/ChangelogPanel';
 import { useSettingsStore } from './store/useSettingsStore';
 import { useCommandPalette } from './hooks/useCommandPalette';
 import WorkArea from './components/workarea/WorkArea';
 import IconButton from './components/ui/IconButton';
 import { wallpaperApi } from './api/wallpaperApi';
+import { getRecord, putRecord } from './data/localDb';
+import { migrateLegacyBackendIfNeeded } from './data/migrations';
 
 const DEFAULT_LAYOUT = [
   { i: '1', w: 2, h: 1, type: 'clock' },
@@ -28,48 +32,115 @@ function normalizeWallpaperUrl(value) {
   const trimmed = value.trim();
   if (!trimmed) return '';
   if (trimmed.startsWith('//')) return `https:${trimmed}`;
-  if (/^(https?:|data:image\/|\/api\/wallpaper\/files\/)/i.test(trimmed)) {
-    return trimmed;
-  }
-  if (/^[\w.-]+\.[a-z]{2,}(\/.*)?$/i.test(trimmed)) {
-    return `https://${trimmed}`;
-  }
+  if (/^(https?:|data:image\/)/i.test(trimmed)) return trimmed;
+  if (/^[\w.-]+\.[a-z]{2,}(\/.*)?$/i.test(trimmed)) return `https://${trimmed}`;
   return trimmed;
 }
 
 function canUseWallpaperValue(value) {
-  return /^(https?:|data:image\/|\/api\/wallpaper\/files\/)/i.test(value);
+  return /^(https?:|data:image\/)/i.test(value);
+}
+
+function legacyLayout() {
+  try {
+    const saved = localStorage.getItem('glass_items');
+    return saved ? JSON.parse(saved) : null;
+  } catch {
+    return null;
+  }
+}
+
+function readAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (event) => resolve(event.target.result);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
 }
 
 function App() {
-  const [items, setItems] = useState(() => {
-    const saved = localStorage.getItem('glass_items');
-    return saved ? JSON.parse(saved) : DEFAULT_LAYOUT;
-  });
+  const [items, setItems] = useState(DEFAULT_LAYOUT);
+  const [dataReady, setDataReady] = useState(false);
+  const [layoutReady, setLayoutReady] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
   const [showExportImport, setShowExportImport] = useState(false);
+  const [showChangelog, setShowChangelog] = useState(false);
   const [urlInput, setUrlInput] = useState('');
   const [wallpaperStatus, setWallpaperStatus] = useState('');
   const [isUploadingWallpaper, setIsUploadingWallpaper] = useState(false);
   const pickerRef = useRef(null);
   const bgInputRef = useRef(null);
 
-  const { bg, setBg, isEditMode } = useSettingsStore();
+  const {
+    bg,
+    setBg,
+    setWallpaperAsset,
+    isEditMode,
+    initializeSettings,
+  } = useSettingsStore();
   const cmdPalette = useCommandPalette();
 
   useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (pickerRef.current && !pickerRef.current.contains(e.target)) {
+    let cancelled = false;
+
+    (async () => {
+      await migrateLegacyBackendIfNeeded();
+      await initializeSettings();
+      if (!cancelled) setDataReady(true);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [initializeSettings]);
+
+  useEffect(() => {
+    if (!dataReady) return undefined;
+    let cancelled = false;
+
+    (async () => {
+      const saved = await getRecord('widgets', 'layout');
+      let layout = saved?.value;
+      if (!layout) {
+        layout = legacyLayout() || DEFAULT_LAYOUT;
+        await putRecord('widgets', {
+          key: 'layout',
+          value: layout,
+          updated_at: new Date().toISOString(),
+        });
+      }
+      if (!cancelled) {
+        setItems(layout);
+        setLayoutReady(true);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [dataReady]);
+
+  useEffect(() => {
+    if (!layoutReady) return;
+    putRecord('widgets', {
+      key: 'layout',
+      value: items,
+      updated_at: new Date().toISOString(),
+    }).catch((error) => {
+      console.error('Failed to persist widget layout', error);
+    });
+  }, [items, layoutReady]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (pickerRef.current && !pickerRef.current.contains(event.target)) {
         setShowPicker(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-
-  useEffect(() => {
-    localStorage.setItem('glass_items', JSON.stringify(items));
-  }, [items]);
 
   useEffect(() => {
     if (bg) {
@@ -85,10 +156,10 @@ function App() {
   }, [bg]);
 
   useEffect(() => {
-    const handler = (e) => {
-      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'e') {
-        e.preventDefault();
-        setShowExportImport((v) => !v);
+    const handler = (event) => {
+      if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === 'e') {
+        event.preventDefault();
+        setShowExportImport((value) => !value);
       }
     };
     document.addEventListener('keydown', handler);
@@ -114,44 +185,54 @@ function App() {
     }
     setBg(nextBg);
     setUrlInput(nextBg);
-    setWallpaperStatus('壁纸已更新');
+    setWallpaperStatus('壁纸 URL 已保存到本地设置');
   };
 
-  const handleBgUpload = (e) => {
-    const file = e.target.files[0];
+  const handleBgUpload = async (event) => {
+    const file = event.target.files[0];
     if (!file) return;
     if (!file.type.startsWith('image/')) {
       setWallpaperStatus('请选择图片文件');
-      e.target.value = '';
+      event.target.value = '';
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = async (ev) => {
-      const dataUrl = ev.target.result;
-      setIsUploadingWallpaper(true);
-      setWallpaperStatus('正在保存本地图片...');
-      try {
-        const result = await wallpaperApi.upload({
-          filename: file.name,
-          mimeType: file.type,
-          dataUrl,
-        });
-        setBg(result.url);
-        setUrlInput(result.url);
-        setWallpaperStatus('本地壁纸已保存');
-      } catch (error) {
-        console.error('Failed to upload wallpaper, falling back to data URL', error);
-        setBg(dataUrl);
-        setUrlInput('');
-        setWallpaperStatus('已使用浏览器本地缓存');
-      } finally {
-        setIsUploadingWallpaper(false);
-        e.target.value = '';
-      }
-    };
-    reader.readAsDataURL(file);
+    setIsUploadingWallpaper(true);
+    setWallpaperStatus('正在压缩并保存到浏览器本地...');
+    try {
+      const result = await wallpaperApi.upload({ file });
+      setWallpaperAsset(result.assetId, result.url);
+      setUrlInput('');
+      setWallpaperStatus(
+        result.compressed
+          ? '本地壁纸已高质量压缩并保存'
+          : '本地壁纸已原画质保存',
+      );
+    } catch (error) {
+      console.error('Failed to save wallpaper in IndexedDB, falling back to data URL', error);
+      const dataUrl = await readAsDataUrl(file);
+      setBg(dataUrl);
+      setUrlInput('');
+      setWallpaperStatus('已回退为浏览器 data URL 保存');
+    } finally {
+      setIsUploadingWallpaper(false);
+      event.target.value = '';
+    }
   };
+
+  if (!dataReady) {
+    return (
+      <div className="app-shell flex min-h-screen w-full items-center justify-center px-5 text-white">
+        <div className="glass-panel w-full max-w-sm p-5 text-center animate-bubble">
+          <div className="panel-kicker">Local Workspace</div>
+          <div className="mt-2 text-base font-semibold text-white/88">正在打开本地工作台</div>
+          <div className="mt-2 text-xs leading-5 text-white/42">
+            正在准备 IndexedDB、本地持久化存储和旧数据迁移。
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const widgetBoard = (
     <SortableBoard
@@ -165,7 +246,7 @@ function App() {
   );
 
   return (
-    <div className="app-shell min-h-screen w-full pb-20 text-white">
+    <div className="app-shell min-h-screen w-full pb-24 text-white">
       <div className="pointer-events-none fixed inset-0 -z-10 bg-black/22" />
 
       <Header
@@ -195,9 +276,9 @@ function App() {
                 type="text"
                 value={urlInput}
                 placeholder="图片 URL"
-                onChange={(e) => setUrlInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && urlInput.trim()) {
+                onChange={(event) => setUrlInput(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' && urlInput.trim()) {
                     applyWallpaperUrl();
                   }
                 }}
@@ -226,12 +307,9 @@ function App() {
               >
                 <FaFileUpload size={14} />
               </button>
-              {bg && !bg.startsWith('data:') && (
+              {bg && /^https?:/i.test(bg) && (
                 <button
-                  onClick={() => {
-                    setBg(bg);
-                    setUrlInput(bg);
-                  }}
+                  onClick={() => setUrlInput(bg)}
                   className="glass-control flex h-10 items-center justify-center px-3 text-xs font-semibold text-white/52 hover:text-white"
                   title="填入当前壁纸"
                 >
@@ -256,6 +334,8 @@ function App() {
         </div>
       )}
 
+      <BackupReminder onOpenBackup={() => setShowExportImport(true)} />
+
       {cmdPalette.isOpen && (
         <CommandPalette
           close={cmdPalette.close}
@@ -268,13 +348,25 @@ function App() {
         <ExportImportPanel onClose={() => setShowExportImport(false)} />
       )}
 
+      {showChangelog && (
+        <ChangelogPanel onClose={() => setShowChangelog(false)} />
+      )}
+
       {!cmdPalette.isOpen && (
-        <IconButton
-          icon={FaKeyboard}
-          onClick={cmdPalette.open}
-          className="fixed bottom-6 right-6 z-30 h-12 w-12 rounded-full shadow-lg"
-          title="命令面板"
-        />
+        <div className="fixed bottom-6 right-6 z-30 flex flex-col gap-3">
+          <IconButton
+            icon={FaHistory}
+            onClick={() => setShowChangelog(true)}
+            className="h-12 w-12 rounded-full shadow-lg"
+            title="更新日志"
+          />
+          <IconButton
+            icon={FaKeyboard}
+            onClick={cmdPalette.open}
+            className="h-12 w-12 rounded-full shadow-lg"
+            title="命令面板"
+          />
+        </div>
       )}
     </div>
   );

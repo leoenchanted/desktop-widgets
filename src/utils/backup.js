@@ -1,23 +1,28 @@
 import { backupApi } from '../api/backupApi';
+import { setSetting } from '../data/localDb';
+import { today } from './date';
+
+const BACKUP_KEY = 'lastBackupAt';
 
 export async function exportBackup() {
-  const data = await backupApi.export();
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const exportedAt = new Date().toISOString();
+  await setSetting(BACKUP_KEY, exportedAt);
+  const backup = await backupApi.export();
+  const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `widgets-backup-${new Date().toISOString().slice(0, 10)}.json`;
+  a.download = `desktop-widgets-backup-${today()}.json`;
   a.click();
   URL.revokeObjectURL(url);
-  return data;
+  return backup;
 }
 
 export async function importBackup(file) {
   const text = await file.text();
-  const data = JSON.parse(text);
-  if (!data.version || !data.data) {
-    throw new Error('Invalid backup file format');
+  const backup = JSON.parse(text);
+  if (!backup.version && !backup.data) {
+    throw new Error('不是有效的桌面工作台备份文件');
   }
-  const result = await backupApi.import(data.data);
-  return result;
+  return backupApi.import(backup);
 }

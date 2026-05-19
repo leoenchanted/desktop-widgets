@@ -195,16 +195,40 @@
 @media (max-width: 1180px) {
   .workspace-grid {
     grid-template-columns: 1fr;
+    gap: 14px;
   }
 
   .workspace-stack {
     grid-template-rows: none;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
   }
 }
 
 @media (max-width: 720px) {
+  :root {
+    --panel-radius: 16px;
+    --control-radius: 10px;
+  }
+
+  .app-shell::before {
+    background-size: 44px 44px, 44px 44px, 100% 100%;
+  }
+
+  .workspace-grid {
+    gap: 12px;
+  }
+
   .workspace-stack {
     grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .markdown-paper {
+    border-radius: 14px;
+  }
+
+  .panel-kicker {
+    letter-spacing: 0.12em;
   }
 }

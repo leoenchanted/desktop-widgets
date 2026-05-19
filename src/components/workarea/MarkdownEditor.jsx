@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { FaCheck, FaEye, FaPenNib, FaRegClock } from 'react-icons/fa';
+import { FaBookmark, FaCheck, FaEye, FaPenNib } from 'react-icons/fa';
 import { useMarkdownStore } from '../../store/useMarkdownStore';
 import { useDebounce } from '../../hooks/useDebounce';
 import MarkdownPreview from './MarkdownPreview';
@@ -90,14 +90,14 @@ const MarkdownEditor = () => {
         ? '保存失败'
         : saveState === 'saved'
           ? '已保存'
-          : '就绪';
+          : '长期保留';
 
   return (
-    <GlassPanel className="flex h-full min-h-[620px] flex-col overflow-hidden" padded={false}>
+    <GlassPanel className="flex h-full min-h-[520px] flex-col overflow-hidden" padded={false}>
       <div className="px-5 pb-3 pt-5">
         <PanelHeader
           eyebrow="Markdown"
-          title="日记与草稿"
+          title="日记草稿"
           icon={FaPenNib}
           action={
             <div className="flex items-center gap-2">
@@ -144,8 +144,8 @@ const MarkdownEditor = () => {
             value={content}
             onChange={(e) => handleChange(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="写下今天的想法、计划或复盘..."
-            className="h-full w-full resize-none bg-transparent p-6 text-[15px] leading-8 text-white/86 outline-none placeholder-white/26 glass-scrollbar selection:bg-[#80bfff]/30 md:text-base"
+            placeholder="写下你的记录、计划或复盘..."
+            className="h-full w-full resize-none bg-transparent p-5 text-[15px] leading-8 text-white/86 outline-none placeholder-white/26 selection:bg-[#80bfff]/30 md:p-6 md:text-base"
             spellCheck={false}
           />
         )}
@@ -158,8 +158,8 @@ const MarkdownEditor = () => {
           wordCount={wordCount}
           extra={
             <span className="flex items-center gap-1.5">
-              <FaRegClock size={10} />
-              {currentDate}
+              <FaBookmark size={10} />
+              长期草稿
             </span>
           }
         />

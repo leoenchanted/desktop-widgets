@@ -1,25 +1,84 @@
-import React, { useRef, useState } from 'react';
-import { FaFileUpload, FaLink, FaTrash } from 'react-icons/fa';
+import React, { useEffect, useRef, useState } from 'react';
+import { FaFileUpload, FaLink, FaSpinner, FaTrash } from 'react-icons/fa';
+import { deleteRecord, getRecord, putRecord } from '../../data/localDb';
+import { wallpaperApi } from '../../api/wallpaperApi';
 
-const ImageWidget = () => {
+function readAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (event) => resolve(event.target.result);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+}
+
+const ImageWidget = ({ widgetId = 'default' }) => {
   const [imgSrc, setImgSrc] = useState(null);
   const [showInput, setShowInput] = useState(false);
+  const [saving, setSaving] = useState(false);
   const fileInputRef = useRef(null);
+  const configKey = `image:${widgetId}`;
 
-  const handleFile = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+  useEffect(() => {
+    let cancelled = false;
 
-    const reader = new FileReader();
-    reader.onload = (ev) => setImgSrc(ev.target.result);
-    reader.readAsDataURL(file);
+    (async () => {
+      const config = await getRecord('widgets', configKey);
+      const value = config?.value;
+      if (!value || cancelled) return;
+
+      if (value.kind === 'asset' && value.assetId) {
+        const objectUrl = await wallpaperApi.getObjectUrl(value.assetId);
+        if (!cancelled) setImgSrc(objectUrl);
+      } else if (value.kind === 'url' || value.kind === 'dataUrl') {
+        setImgSrc(value.url);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [configKey]);
+
+  const saveConfig = async (value) => {
+    await putRecord('widgets', {
+      key: configKey,
+      value,
+      updated_at: new Date().toISOString(),
+    });
   };
 
-  const handleUrlSubmit = (e) => {
-    if (e.key === 'Enter' && e.target.value.trim()) {
-      setImgSrc(e.target.value.trim());
-      setShowInput(false);
+  const handleFile = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+    setSaving(true);
+    try {
+      const result = await wallpaperApi.upload({ file, type: 'image-widget' });
+      setImgSrc(result.url);
+      await saveConfig({ kind: 'asset', assetId: result.assetId, name: file.name });
+    } catch (error) {
+      console.error('Failed to save image widget asset', error);
+      const dataUrl = await readAsDataUrl(file);
+      setImgSrc(dataUrl);
+      await saveConfig({ kind: 'dataUrl', url: dataUrl, name: file.name });
+    } finally {
+      setSaving(false);
+      event.target.value = '';
     }
+  };
+
+  const handleUrlSubmit = async (event) => {
+    if (event.key === 'Enter' && event.target.value.trim()) {
+      const url = event.target.value.trim();
+      setImgSrc(url);
+      setShowInput(false);
+      await saveConfig({ kind: 'url', url });
+    }
+  };
+
+  const handleRemove = async () => {
+    setImgSrc(null);
+    await deleteRecord('widgets', configKey);
   };
 
   return (
@@ -41,7 +100,7 @@ const ImageWidget = () => {
           <div className="absolute inset-0 bg-black/8" />
           <div className="absolute bottom-3 right-3 z-10 flex gap-2 opacity-0 transition-opacity group-hover/img:opacity-100">
             <button
-              onClick={() => setImgSrc(null)}
+              onClick={handleRemove}
               className="flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-black/42 text-white/74 backdrop-blur-xl transition-colors hover:bg-[#ff8d8d]/80 hover:text-white"
               title="移除图片"
             >
@@ -51,7 +110,12 @@ const ImageWidget = () => {
         </>
       ) : (
         <div className="flex w-full flex-col items-center gap-4 px-5 text-center">
-          {showInput ? (
+          {saving ? (
+            <div className="flex items-center gap-2 text-sm font-medium text-white/42">
+              <FaSpinner className="animate-spin" />
+              保存中
+            </div>
+          ) : showInput ? (
             <input
               autoFocus
               placeholder="粘贴图片链接"

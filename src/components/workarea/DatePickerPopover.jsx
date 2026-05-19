@@ -47,11 +47,15 @@ const DatePickerPopover = ({ currentDate, onDateChange, datesWithData = [] }) =>
       </button>
 
       {isOpen && (
-        <div className="absolute left-0 top-full z-50 mt-2 w-72 origin-top-left rounded-3xl border border-white/16 bg-[#121923]/95 p-3 shadow-2xl backdrop-blur-2xl animate-bubble">
+        <div
+          className="absolute right-0 top-full z-[120] mt-2 max-h-[70vh] origin-top-right overflow-y-auto rounded-2xl border border-white/16 bg-[#101820]/96 p-3 shadow-2xl backdrop-blur-2xl glass-scrollbar animate-bubble"
+          style={{ width: 'min(18rem, calc(100vw - 2rem))' }}
+        >
           <div className="mb-3 flex items-center justify-between">
             <button
               onClick={() => moveMonth(-1)}
               className="flex h-8 w-8 items-center justify-center rounded-xl text-white/48 transition-colors hover:bg-white/10 hover:text-white"
+              title="上个月"
             >
               <FaChevronLeft size={10} />
             </button>
@@ -61,12 +65,13 @@ const DatePickerPopover = ({ currentDate, onDateChange, datesWithData = [] }) =>
             <button
               onClick={() => moveMonth(1)}
               className="flex h-8 w-8 items-center justify-center rounded-xl text-white/48 transition-colors hover:bg-white/10 hover:text-white"
+              title="下个月"
             >
               <FaChevronRight size={10} />
             </button>
           </div>
 
-          <div className="mb-1 grid grid-cols-7 gap-1 text-center">
+          <div className="mb-1 grid grid-cols-7 gap-0.5 text-center">
             {WEEKDAYS.map((day) => (
               <div key={day} className="py-1 text-[10px] font-semibold text-white/36">
                 {day}
@@ -74,7 +79,7 @@ const DatePickerPopover = ({ currentDate, onDateChange, datesWithData = [] }) =>
             ))}
           </div>
 
-          <div className="grid grid-cols-7 gap-1 text-center">
+          <div className="grid grid-cols-7 gap-0.5 text-center">
             {Array(firstDay)
               .fill(null)
               .map((_, i) => (
@@ -96,9 +101,9 @@ const DatePickerPopover = ({ currentDate, onDateChange, datesWithData = [] }) =>
                       onDateChange(date);
                       setIsOpen(false);
                     }}
-                    className={`relative flex h-9 items-center justify-center rounded-xl text-xs transition-all duration-200 ${
+                    className={`relative flex h-8 items-center justify-center rounded-lg text-xs transition-all duration-200 ${
                       selected
-                        ? 'bg-[#80bfff]/24 text-white ring-1 ring-[#80bfff]/35'
+                        ? 'bg-[#9cc9ff]/24 text-white ring-1 ring-[#9cc9ff]/35'
                         : dayIsToday
                           ? 'bg-white/8 text-white'
                           : 'text-white/56 hover:bg-white/10 hover:text-white'
@@ -106,7 +111,7 @@ const DatePickerPopover = ({ currentDate, onDateChange, datesWithData = [] }) =>
                   >
                     {day}
                     {hasData && (
-                      <span className="absolute bottom-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-[#7ee7ad]" />
+                      <span className="absolute bottom-0.5 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-[#9ae9bd]" />
                     )}
                   </button>
                 );

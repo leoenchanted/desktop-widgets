@@ -46,7 +46,7 @@ const SortableItem = ({
           !isDragging ? 'hover:-translate-y-1 hover:border-white/30 hover:bg-white/12' : ''
         }`}
       >
-        <Component />
+        <Component widget={widget} widgetId={id} />
         {isEditMode && <div className="absolute inset-0 z-30 bg-transparent" />}
       </div>
 

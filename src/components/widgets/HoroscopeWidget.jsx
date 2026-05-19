@@ -7,6 +7,7 @@ import {
   FaSpinner,
   FaStar,
 } from 'react-icons/fa';
+import { getSetting, setSetting } from '../../data/localDb';
 
 const SIGNS = [
   { val: '白羊座', date: '3.21-4.19' },
@@ -72,14 +73,30 @@ const ScoreRow = ({ icon, label, value, color }) => (
 );
 
 const HoroscopeWidget = () => {
-  const [sign, setSign] = useState(localStorage.getItem('glass_sign') || '白羊座');
+  const [sign, setSign] = useState('白羊座');
   const [data, setData] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      const stored = await getSetting('horoscopeSign');
+      const legacy = localStorage.getItem('glass_sign');
+      const nextSign = stored || legacy || '白羊座';
+      if (!stored && nextSign) await setSetting('horoscopeSign', nextSign);
+      if (!cancelled) setSign(nextSign);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => {
       setData(makeDailyData(sign));
     }, 250);
-    localStorage.setItem('glass_sign', sign);
+    setSetting('horoscopeSign', sign);
     return () => clearTimeout(timer);
   }, [sign]);
 

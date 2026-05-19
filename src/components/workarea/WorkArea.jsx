@@ -13,7 +13,7 @@ const WorkArea = () => {
   const date = today();
 
   return (
-    <div className="mx-auto flex min-h-[calc(100vh-230px)] w-full max-w-[1640px] flex-col gap-4 pb-8">
+    <div className="mx-auto flex w-full max-w-[1640px] flex-col gap-4 pb-8 md:min-h-[calc(100vh-230px)]">
       <GlassPanel className="cockpit-panel cockpit-ruler px-5 py-5 md:px-6" padded={false}>
         <div className="relative z-10 flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
           <div>
@@ -33,7 +33,7 @@ const WorkArea = () => {
             </StatusPill>
             <StatusPill>
               <FaDatabase className="mr-1.5" size={10} />
-              本地数据库
+              IndexedDB 本地保存
             </StatusPill>
           </div>
         </div>
@@ -45,7 +45,7 @@ const WorkArea = () => {
           <DailyReview />
         </aside>
 
-        <main className="min-h-[620px] min-w-0">
+        <main className="min-h-[520px] min-w-0 md:min-h-[620px]">
           <MarkdownEditor />
         </main>
 

@@ -47,7 +47,7 @@ const TodoList = () => {
   };
 
   return (
-    <GlassPanel className="flex h-full min-h-[250px] flex-col overflow-hidden" padded={false}>
+    <GlassPanel className="relative z-20 flex h-full min-h-[250px] flex-col overflow-visible" padded={false}>
       <div className="px-4 pb-3 pt-4">
         <PanelHeader
           eyebrow="Todo"
@@ -60,7 +60,7 @@ const TodoList = () => {
           }
         />
 
-        <div className="mt-4">
+        <div className="relative z-30 mt-4">
           <DatePickerPopover
             currentDate={currentDate}
             onDateChange={handleDateChange}
@@ -70,7 +70,7 @@ const TodoList = () => {
 
         <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-white/8">
           <div
-            className="h-full rounded-full bg-gradient-to-r from-[#7ee7ad] to-[#80bfff] transition-all duration-500"
+            className="h-full rounded-full bg-gradient-to-r from-[#9ae9bd] to-[#9cc9ff] transition-all duration-500"
             style={{ width: `${progress}%` }}
           />
         </div>
@@ -83,7 +83,7 @@ const TodoList = () => {
               if (e.key === 'Enter') handleAdd();
             }}
             placeholder="添加一个任务"
-            className="min-w-0 flex-1 rounded-2xl border border-white/12 bg-white/8 px-3 py-2 text-sm text-white/82 outline-none placeholder-white/28 transition-all focus:border-[#80bfff]/40 focus:bg-white/12 focus:ring-1 focus:ring-[#80bfff]/18"
+            className="min-w-0 flex-1 rounded-2xl border border-white/12 bg-white/8 px-3 py-2 text-sm text-white/82 outline-none placeholder-white/28 transition-all focus:border-[#9cc9ff]/40 focus:bg-white/12 focus:ring-1 focus:ring-[#9cc9ff]/18"
           />
           <button
             onClick={handleAdd}
@@ -98,7 +98,7 @@ const TodoList = () => {
 
       <div className="soft-divider" />
 
-      <div className="flex-1 overflow-y-auto p-2 glass-scrollbar">
+      <div className="min-h-0 flex-1 overflow-y-auto p-2 glass-scrollbar">
         {loading ? (
           <div className="flex h-full items-center justify-center text-sm text-white/35">
             加载中...

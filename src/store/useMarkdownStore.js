@@ -1,31 +1,21 @@
 import { create } from 'zustand';
 import { markdownApi } from '../api/markdownApi';
-import { today } from '../utils/date';
+
+export const WORKSPACE_DRAFT_KEY = 'workspace';
 
 export const useMarkdownStore = create((set, get) => ({
   content: '',
-  currentDate: today(),
+  currentDate: WORKSPACE_DRAFT_KEY,
   wordCount: 0,
   charCount: 0,
   loading: false,
 
-  setCurrentDate: async (date) => {
-    set({ currentDate: date, loading: true });
-    try {
-      const entry = await markdownApi.getByDate(date);
-      set({
-        content: entry.content || '',
-        wordCount: entry.word_count || 0,
-        charCount: entry.char_count || 0,
-        loading: false,
-      });
-    } catch {
-      set({ loading: false });
-    }
+  setCurrentDate: async () => {
+    await get().fetchContent(WORKSPACE_DRAFT_KEY);
   },
 
-  fetchContent: async (date) => {
-    set({ loading: true });
+  fetchContent: async (date = WORKSPACE_DRAFT_KEY) => {
+    set({ currentDate: WORKSPACE_DRAFT_KEY, loading: true });
     try {
       const entry = await markdownApi.getByDate(date);
       set({
@@ -46,8 +36,8 @@ export const useMarkdownStore = create((set, get) => ({
   },
 
   saveContent: async () => {
-    const { content, currentDate } = get();
-    const entry = await markdownApi.save(currentDate, content);
+    const { content } = get();
+    const entry = await markdownApi.save(WORKSPACE_DRAFT_KEY, content);
     set({
       wordCount: entry.word_count,
       charCount: entry.char_count,

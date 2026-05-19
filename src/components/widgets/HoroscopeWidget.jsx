@@ -101,8 +101,8 @@ const HoroscopeWidget = () => {
   }, [sign]);
 
   return (
-    <div className="flex h-full w-full flex-col p-5">
-      <div className="mb-3 flex flex-shrink-0 items-center gap-2 text-xs font-bold uppercase tracking-[0.14em] text-white/54">
+    <div className="widget-content horoscope-widget flex h-full w-full min-h-0 flex-col p-4">
+      <div className="mb-2 flex flex-shrink-0 items-center gap-2 text-xs font-bold uppercase tracking-[0.14em] text-white/54">
         <FaStar size={12} />
         星座运势
       </div>
@@ -110,7 +110,7 @@ const HoroscopeWidget = () => {
       <select
         value={sign}
         onChange={(e) => setSign(e.target.value)}
-        className="mb-4 w-full cursor-pointer appearance-none rounded-2xl border border-white/12 bg-black/20 px-3 py-2 text-sm text-white outline-none transition-colors hover:bg-black/28"
+        className="mb-3 w-full cursor-pointer appearance-none rounded-2xl border border-white/12 bg-black/20 px-3 py-2 text-sm text-white outline-none transition-colors hover:bg-black/28"
       >
         {SIGNS.map((item) => (
           <option key={item.val} value={item.val}>
@@ -126,7 +126,7 @@ const HoroscopeWidget = () => {
             计算中...
           </div>
         ) : (
-          <div className="space-y-4 animate-fade-in">
+          <div className="space-y-3 animate-fade-in">
             <p className="text-sm leading-relaxed text-white/78">{data.summary}</p>
 
             <div className="grid grid-cols-2 gap-2">
@@ -140,7 +140,7 @@ const HoroscopeWidget = () => {
               </div>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-2.5">
               <ScoreRow icon={<FaHeart className="text-[#ff9db5]" />} label="爱情" value={data.scores.love} color="bg-[#ff9db5]" />
               <ScoreRow icon={<FaBriefcase className="text-[#80bfff]" />} label="事业" value={data.scores.work} color="bg-[#80bfff]" />
               <ScoreRow icon={<FaCoins className="text-[#f8d77a]" />} label="财运" value={data.scores.money} color="bg-[#f8d77a]" />

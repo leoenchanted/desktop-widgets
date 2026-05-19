@@ -324,13 +324,6 @@ function App() {
             )}
           </div>
 
-          <button
-            onClick={() => setShowExportImport(true)}
-            className="glass-control flex h-10 items-center gap-2 px-4 text-sm font-semibold text-white/66 hover:text-white"
-          >
-            <FaDownload size={12} />
-            备份
-          </button>
         </div>
       )}
 
@@ -354,6 +347,12 @@ function App() {
 
       {!cmdPalette.isOpen && (
         <div className="fixed bottom-[calc(env(safe-area-inset-bottom)+1rem)] right-5 z-30 flex flex-col gap-3 md:right-6">
+          <IconButton
+            icon={FaDownload}
+            onClick={() => setShowExportImport(true)}
+            className="h-12 w-12 rounded-full shadow-lg"
+            title="备份数据"
+          />
           <IconButton
             icon={FaHistory}
             onClick={() => setShowChangelog(true)}

@@ -40,6 +40,12 @@ const SortableBoard = ({
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  const handleResizeItem = (id, size) => {
+    setItems((currentItems) => currentItems.map((item) => (
+      item.i === id ? { ...item, ...size } : item
+    )));
+  };
+
   return (
     <DndContext
       sensors={sensors}
@@ -76,10 +82,14 @@ const SortableBoard = ({
                 key={item.i}
                 id={item.i}
                 widget={item}
+                config={config}
                 component={config.component}
                 isEditMode={isEditMode}
                 isCompact={isCompact}
+                gridSize={actualGridSize}
+                margin={actualMargin}
                 onRemove={onRemoveItem}
+                onResize={handleResizeItem}
               />
             );
           })}

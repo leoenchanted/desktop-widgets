@@ -12,18 +12,18 @@ const ClockWidget = () => {
   }, []);
 
   return (
-    <div className="flex h-full w-full flex-row items-center justify-between p-5">
-      <div className="flex items-baseline">
-        <div className="display-type text-5xl font-medium leading-none md:text-6xl">
+    <div className="widget-content clock-widget flex h-full w-full flex-row items-center justify-between gap-3 p-4">
+      <div className="flex min-w-0 items-baseline">
+        <div className="display-type clock-time truncate font-medium leading-none">
           {pad(time.getHours())}:{pad(time.getMinutes())}
         </div>
-        <div className="ml-2 w-8 text-2xl font-light text-white/50">
+        <div className="clock-seconds ml-2 flex-shrink-0 font-light text-white/50">
           {pad(time.getSeconds())}
         </div>
       </div>
-      <div className="text-right">
+      <div className="clock-meta min-w-[72px] flex-shrink-0 text-right">
         <div className="text-sm font-semibold text-white/70">现在</div>
-        <div className="mt-1 text-sm text-white/48">{formatDate(localDateKey(time))}</div>
+        <div className="mt-1 text-xs text-white/48">{formatDate(localDateKey(time))}</div>
       </div>
     </div>
   );

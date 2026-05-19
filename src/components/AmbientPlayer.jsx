@@ -249,7 +249,7 @@ const AmbientPlayer = ({ className = '' }) => {
       ref={panelRef}
       className={`relative z-30 w-full ${className}`}
     >
-      <div className="glass-panel ambient-player-panel overflow-hidden rounded-2xl p-1.5 shadow-2xl">
+      <div className="glass-panel ambient-player-panel overflow-visible rounded-2xl p-1.5 shadow-2xl">
         <div className="flex items-center gap-1.5">
           <button
             onClick={handleToggle}
@@ -305,30 +305,32 @@ const AmbientPlayer = ({ className = '' }) => {
         </div>
 
         {expanded && (
-          <div className="mt-1.5 grid grid-cols-3 gap-1 border-t border-white/10 pt-1.5">
-            {AMBIENT_SOUNDS.map((sound) => (
-              <button
-                key={sound.id}
-                onClick={() => handleSelect(sound.id)}
-                className={`rounded-xl px-2 py-2 text-left transition-all ${
-                  sound.id === selectedId
-                    ? 'bg-white/14 text-white'
-                    : 'text-white/50 hover:bg-white/8 hover:text-white/80'
-                }`}
-                title={sound.type === 'sample' ? `需要 ${sound.fileName}` : sound.label}
-              >
-                <span
-                  className="mb-1 block h-1.5 w-1.5 rounded-full"
-                  style={{ backgroundColor: sound.color }}
-                />
-                <span className="block text-[11px] font-semibold">{sound.label}</span>
-                <span className="mt-0.5 block text-[10px] text-white/28">
-                  {sound.type === 'generated' ? '实时生成' : '本地循环'}
-                </span>
-              </button>
-            ))}
+          <div className="glass-panel absolute left-1/2 top-[calc(100%+0.5rem)] z-50 w-[min(92vw,340px)] -translate-x-1/2 rounded-2xl p-1.5 shadow-2xl animate-bubble">
+            <div className="grid grid-cols-3 gap-1">
+              {AMBIENT_SOUNDS.map((sound) => (
+                <button
+                  key={sound.id}
+                  onClick={() => handleSelect(sound.id)}
+                  className={`rounded-xl px-2 py-2 text-left transition-all ${
+                    sound.id === selectedId
+                      ? 'bg-white/14 text-white'
+                      : 'text-white/50 hover:bg-white/8 hover:text-white/80'
+                  }`}
+                  title={sound.type === 'sample' ? `需要 ${sound.fileName}` : sound.label}
+                >
+                  <span
+                    className="mb-1 block h-1.5 w-1.5 rounded-full"
+                    style={{ backgroundColor: sound.color }}
+                  />
+                  <span className="block text-[11px] font-semibold">{sound.label}</span>
+                  <span className="mt-0.5 block text-[10px] text-white/28">
+                    {sound.type === 'generated' ? '实时生成' : '本地循环'}
+                  </span>
+                </button>
+              ))}
+            </div>
 
-            <div className="col-span-3 flex items-center gap-2.5 px-1 pt-1.5 sm:hidden">
+            <div className="mt-1.5 flex items-center gap-2.5 border-t border-white/10 px-1 pt-1.5 sm:hidden">
               <button
                 onClick={() => setMuted((value) => !value)}
                 className="glass-control flex h-9 w-9 flex-shrink-0 items-center justify-center text-white/58"
@@ -352,7 +354,7 @@ const AmbientPlayer = ({ className = '' }) => {
         )}
 
         {message && (
-          <div className="mx-1 mt-2 rounded-xl border border-[#f1cf75]/18 bg-[#f1cf75]/10 px-3 py-2 text-xs leading-5 text-[#ffe5a3]">
+          <div className="absolute left-1/2 top-[calc(100%+0.5rem)] z-50 w-[min(92vw,340px)] -translate-x-1/2 rounded-xl border border-[#f1cf75]/18 bg-[#2a210d]/90 px-3 py-2 text-xs leading-5 text-[#ffe5a3] shadow-2xl backdrop-blur-xl">
             {message}
           </div>
         )}

@@ -65,6 +65,7 @@ npm run start
 - 不要做卡片套卡片。只有重复项、弹窗、工具面板可以像卡片。
 - 紧凑操作优先用图标按钮，并加 `title` 提示。
 - 移动端必须保留清晰的“组件区 / 工作区”切换入口，不能只依赖桌面端右侧箭头。
+- 备份入口必须在常驻可见工具区，不能只藏在编辑桌面或设置浮层里。
 
 重要样式文件：
 
@@ -111,6 +112,7 @@ npm run start
 - 不显示时长。
 - 不支持拖动进度。
 - 只保留环境音选择、播放/暂停、音量、静音和播放状态。
+- 环境音下拉选项必须是绝对定位浮层，不能撑开 Header 或把页面内容顶下去。
 
 环境音配置：
 
@@ -140,6 +142,24 @@ IndexedDB settings 字段：
 - `ambientMuted`：是否静音。
 
 不要保存 `isPlaying`，避免用户打开页面时自动出声；浏览器移动端也通常要求用户手动触发播放。
+
+## 组件区尺寸规则
+
+组件区使用 CSS grid + `w/h` 跨格尺寸：
+
+- 布局数据在 `widgets` store 的 `layout` 记录里。
+- 组件定义在 `src/config/widgetRegistry.js`。
+- 每个组件必须配置 `defaultW/defaultH`，可调整大小的边界用 `minW/minH/maxW/maxH`。
+- 编辑模式下通过 `src/components/SortableItem.jsx` 的右下角 handle 调整大小。
+- 如果达到组件自己的最小尺寸，不能继续缩小。
+- 移动端优先保证布局稳定，当前不显示 resize handle。
+
+组件内容必须根据容器自适应：
+
+- `SortableItem` 的内部容器使用 `widget-card`，开启 container query。
+- 组件内部根元素优先加 `widget-content`。
+- 文本必须 clamp、滚动或隐藏溢出，不能遮挡别的内容或撑破组件。
+- 固定尺寸元素，例如日历日期圆点，必须跟随容器尺寸缩放。
 
 ## 数据规则
 

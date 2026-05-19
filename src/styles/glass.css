@@ -105,6 +105,70 @@
   min-height: 0;
 }
 
+.widget-card {
+  container-type: size;
+}
+
+.widget-content {
+  min-height: 0;
+  min-width: 0;
+}
+
+.clock-time {
+  font-size: clamp(2rem, 12cqw, 3.65rem);
+}
+
+.clock-seconds {
+  font-size: clamp(1rem, 4.6cqw, 1.5rem);
+}
+
+.quote-main {
+  display: -webkit-box;
+  font-size: clamp(0.98rem, 5.8cqw, 1.2rem);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+}
+
+.quote-sub {
+  display: -webkit-box;
+  font-size: clamp(0.78rem, 4.3cqw, 0.92rem);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+.calendar-day {
+  height: clamp(1.35rem, 12cqw, 2rem);
+  width: clamp(1.35rem, 12cqw, 2rem);
+}
+
+@container (max-width: 260px) {
+  .clock-meta {
+    display: none;
+  }
+
+  .calendar-grid {
+    gap: 0.125rem;
+  }
+
+  .horoscope-widget select {
+    font-size: 0.75rem;
+    padding-bottom: 0.42rem;
+    padding-top: 0.42rem;
+  }
+}
+
+@container (max-height: 170px) {
+  .quote-main {
+    -webkit-line-clamp: 2;
+  }
+
+  .quote-sub {
+    display: none;
+  }
+}
+
 .panel-kicker {
   color: var(--subtle);
   font-size: 10px;

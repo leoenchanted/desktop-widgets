@@ -1,14 +1,46 @@
 import { create } from 'zustand';
 import { pomodoroApi } from '../api/pomodoroApi';
+import { getSetting, setSetting } from '../data/localDb';
 import { today } from '../utils/date';
 
+const DEFAULT_DURATION = 25;
+const MIN_DURATION = 5;
+const MAX_DURATION = 120;
+
+const clampDuration = (value) => {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return DEFAULT_DURATION;
+  return Math.max(MIN_DURATION, Math.min(MAX_DURATION, Math.round(numeric)));
+};
+
 export const usePomodoroStore = create((set, get) => ({
-  minutes: 25,
+  durationMinutes: DEFAULT_DURATION,
+  minutes: DEFAULT_DURATION,
   seconds: 0,
   isRunning: false,
   sessionCount: 0,
+  focusMinutes: 0,
   currentDate: today(),
   intervalId: null,
+
+  initializeDuration: async () => {
+    const duration = clampDuration(await getSetting('pomodoroDuration', DEFAULT_DURATION));
+    set((state) => ({
+      durationMinutes: duration,
+      minutes: state.isRunning ? state.minutes : duration,
+      seconds: state.isRunning ? state.seconds : 0,
+    }));
+  },
+
+  setDuration: async (value) => {
+    const duration = clampDuration(value);
+    await setSetting('pomodoroDuration', duration);
+    set((state) => ({
+      durationMinutes: duration,
+      minutes: state.isRunning ? state.minutes : duration,
+      seconds: state.isRunning ? state.seconds : 0,
+    }));
+  },
 
   start: () => {
     const { intervalId } = get();
@@ -36,32 +68,36 @@ export const usePomodoroStore = create((set, get) => ({
   },
 
   reset: () => {
-    const { intervalId } = get();
+    const { intervalId, durationMinutes } = get();
     if (intervalId) clearInterval(intervalId);
-    set({ minutes: 25, seconds: 0, isRunning: false, intervalId: null });
+    set({ minutes: durationMinutes, seconds: 0, isRunning: false, intervalId: null });
   },
 
   completeSession: async () => {
-    const { intervalId, currentDate } = get();
+    const { intervalId, currentDate, durationMinutes } = get();
     if (intervalId) clearInterval(intervalId);
     set({ intervalId: null });
     try {
-      await pomodoroApi.create(currentDate, 25);
-      set((s) => ({
-        minutes: 25,
+      await pomodoroApi.create(currentDate, durationMinutes);
+      set((state) => ({
+        minutes: durationMinutes,
         seconds: 0,
         isRunning: false,
-        sessionCount: s.sessionCount + 1,
+        sessionCount: state.sessionCount + 1,
+        focusMinutes: state.focusMinutes + durationMinutes,
       }));
     } catch {
-      set({ minutes: 25, seconds: 0, isRunning: false });
+      set({ minutes: durationMinutes, seconds: 0, isRunning: false });
     }
   },
 
   fetchSessions: async (date) => {
     try {
       const sessions = await pomodoroApi.getByDate(date);
-      set({ sessionCount: sessions.length });
+      set({
+        sessionCount: sessions.length,
+        focusMinutes: sessions.reduce((total, session) => total + Number(session.duration || 0), 0),
+      });
     } catch (error) {
       console.error('Failed to fetch pomodoro sessions', error);
     }

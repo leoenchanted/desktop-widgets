@@ -1,4 +1,5 @@
 import { exportAllStores, importAllStores } from '../data/localDb';
+import { normalizeWidgetLayout } from '../config/widgetRegistry';
 import { blobToDataUrl, dataUrlToBlob } from '../utils/imageCompression';
 
 const BACKUP_VERSION = 2;
@@ -24,6 +25,16 @@ function hydrateAssets(assets = []) {
       ...rest,
       blob: dataUrlToBlob(dataUrl),
       size: rest.size || dataUrl.length,
+    };
+  });
+}
+
+function normalizeWidgetRows(widgets = []) {
+  return widgets.map((row) => {
+    if (row?.key !== 'layout') return row;
+    return {
+      ...row,
+      value: normalizeWidgetLayout(row.value),
     };
   });
 }
@@ -56,6 +67,7 @@ export const backupApi = {
       exportedAt: new Date().toISOString(),
       data: {
         ...data,
+        widgets: normalizeWidgetRows(data.widgets),
         assets: await serializeAssets(data.assets),
       },
     };
@@ -65,7 +77,7 @@ export const backupApi = {
     const data = normalizeBackup(backup);
     const hydrated = {
       settings: data.settings || [],
-      widgets: data.widgets || [],
+      widgets: normalizeWidgetRows(data.widgets || []),
       todos: data.todos || [],
       markdown_entries: data.markdown_entries || [],
       daily_reviews: data.daily_reviews || [],

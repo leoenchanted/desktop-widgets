@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { FaCheck, FaCog, FaPlus } from 'react-icons/fa';
+import { FaCheck, FaCog, FaImage, FaPlus } from 'react-icons/fa';
 import { useSettingsStore } from '../store/useSettingsStore';
 import IconButton from './ui/IconButton';
 import { formatDate } from '../utils/date';
@@ -7,7 +7,7 @@ import AmbientPlayer from './AmbientPlayer';
 
 const pad = (value) => String(value).padStart(2, '0');
 
-const Header = ({ onTogglePicker, showPicker }) => {
+const Header = ({ onTogglePicker, onOpenWallpaper, showPicker }) => {
   const { username, setUsername, isEditMode, toggleEditMode } = useSettingsStore();
   const [now, setNow] = useState(() => new Date());
 
@@ -27,7 +27,7 @@ const Header = ({ onTogglePicker, showPicker }) => {
   const dateKey = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
 
   return (
-    <header className="mx-auto grid w-full max-w-[1680px] grid-cols-[minmax(0,1fr)_auto] gap-4 px-5 pb-4 pt-[calc(env(safe-area-inset-top)+1.25rem)] md:grid-cols-[minmax(0,1fr)_minmax(260px,340px)_minmax(0,1fr)] md:items-end md:gap-6 md:px-8 md:pb-6 md:pt-7">
+    <header className="app-header mx-auto grid w-full max-w-[1680px] grid-cols-[minmax(0,1fr)_auto] gap-4 px-5 pb-4 pt-[calc(env(safe-area-inset-top)+1.25rem)] md:grid-cols-[minmax(0,1fr)_minmax(260px,340px)_minmax(0,1fr)] md:items-end md:gap-6 md:px-8 md:pb-6 md:pt-7">
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-3 text-sm font-semibold text-white/58">
           <span className="rounded-full border border-white/10 bg-white/7 px-3 py-1">
@@ -59,6 +59,11 @@ const Header = ({ onTogglePicker, showPicker }) => {
           active={isEditMode}
           title={isEditMode ? '完成编辑' : '编辑桌面'}
           className={isEditMode ? 'bg-[#9cc9ff]/20 text-white' : ''}
+        />
+        <IconButton
+          icon={FaImage}
+          onClick={onOpenWallpaper}
+          title="壁纸设置"
         />
         <IconButton
           icon={FaPlus}

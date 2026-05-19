@@ -3,14 +3,13 @@ import { useSettingsStore } from '../store/useSettingsStore';
 import SectionNav from './SectionNav';
 
 const Layout = ({ widgetBoard, workArea }) => {
-  const { activeSection, toggleSection, setSection } = useSettingsStore();
+  const { activeSection, toggleSection } = useSettingsStore();
 
   return (
     <div className="w-full">
       <SectionNav
         activeSection={activeSection}
         onToggle={toggleSection}
-        onSetSection={setSection}
       />
 
       <div className="overflow-hidden px-4 md:px-6">

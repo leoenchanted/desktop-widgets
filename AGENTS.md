@@ -100,9 +100,11 @@ npm run start
 移动端规则：
 
 - `SectionNav` 在移动端必须显示明确的双按钮分段控件：组件区 / 工作区。
+- 桌面端和移动端都应在组件区/工作区内容上方居中放置一个切换按钮，使用切换图标，一次点击直接切换页面；不要再把主切换按钮固定到右侧。
 - 组件区网格在移动端要压缩间距和单元尺寸，避免横跨 3 格的小组件撑出横向滚动。
 - 固定按钮、备份提醒、编辑浮层要考虑 `safe-area-inset-*`，避免被 iOS 底部 Home Indicator 或顶部状态栏挡住。
 - 移动端优先保证查看和轻量编辑，不要把桌面端密集工具条原样塞进窄屏。
+- PWA 尽量使用沉浸式配置：`viewport-fit=cover`、透明状态栏、`display_override: ["window-controls-overlay", "standalone"]`。注意网页不能强制隐藏所有系统状态栏/窗口按钮，只能请求浏览器支持的显示模式。
 
 ## 环境音控制器
 
@@ -143,6 +145,23 @@ IndexedDB settings 字段：
 
 不要保存 `isPlaying`，避免用户打开页面时自动出声；浏览器移动端也通常要求用户手动触发播放。
 
+## 番茄钟规则
+
+番茄钟相关文件：
+
+- UI：`src/components/workarea/PomodoroTimer.jsx`
+- 状态：`src/store/usePomodoroStore.js`
+- 记录：`src/api/pomodoroApi.js`
+
+规则：
+
+- 默认时长保持 25 分钟。
+- 用户可以设置时长，允许范围 5-120 分钟。
+- 设置项保存到 IndexedDB `settings.pomodoroDuration`。
+- 运行中修改时长不强制重置当前倒计时；未运行时修改时长会重置当前显示时间。
+- 完成记录里的 `duration` 必须使用实际设置的时长，今日专注分钟数应按历史 session 的 duration 求和。
+- 番茄钟在工作区侧栏窄卡片里必须完整显示；新增控件时要按 280px 左右宽度检查，不能让时长按钮、圆环或统计区溢出。
+
 ## 组件区尺寸规则
 
 组件区使用 CSS grid + `w/h` 跨格尺寸：
@@ -150,6 +169,8 @@ IndexedDB settings 字段：
 - 布局数据在 `widgets` store 的 `layout` 记录里。
 - 组件定义在 `src/config/widgetRegistry.js`。
 - 每个组件必须配置 `defaultW/defaultH`，可调整大小的边界用 `minW/minH/maxW/maxH`。
+- `defaultW/defaultH` 不能小于 `minW/minH`，默认桌面布局也必须从 registry 默认尺寸生成，不要手写低于最小尺寸的旧值。
+- 加载旧布局或导入布局时必须经过 `normalizeWidgetLayout` 修正，避免历史数据低于组件最小尺寸。
 - 编辑模式下通过 `src/components/SortableItem.jsx` 的右下角 handle 调整大小。
 - 如果达到组件自己的最小尺寸，不能继续缩小。
 - 移动端优先保证布局稳定，当前不显示 resize handle。
@@ -235,10 +256,12 @@ Markdown 相关文件：
 - 本地图片上传后存入 IndexedDB 的 `assets` store。
 - 上传图片会做高质量压缩：只在图片过大或体积过大时缩放到最长边 2560px，编码质量保持较高，避免明显损失画质。
 - 如果 IndexedDB 保存失败，回退到浏览器 data URL。
+- 壁纸设置入口必须作为 Header 顶部按钮，放在「编辑桌面」旁边；不要再藏进编辑模式底部浮层。
 
 相关文件：
 
 - `src/App.jsx`
+- `src/components/WallpaperPanel.jsx`
 - `src/api/wallpaperApi.js`
 - `src/utils/imageCompression.js`
 
@@ -315,3 +338,4 @@ npm run build
 - 核心日常功能不要依赖联网服务。
 - 域名部署场景下，用户数据必须留在用户自己的浏览器本地，不要默认上传到远程服务。
 - UI 改动默认延续 Apple 风格玻璃工作台方向，除非用户明确要求换视觉语言。
+- 默认不要主动 `git commit` 或 `git push`。改完代码后只运行验证并说明改动，推送 GitHub 由用户本地测试确认后自己操作；只有用户明确要求“提交/推送”时才执行。

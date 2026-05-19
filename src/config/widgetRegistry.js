@@ -80,3 +80,28 @@ export const WIDGET_REGISTRY = {
 };
 
 export const AVAILABLE_WIDGETS = Object.values(WIDGET_REGISTRY);
+
+export function clampWidgetSize(item) {
+  const config = WIDGET_REGISTRY[item?.type];
+  if (!config) return item;
+
+  const minW = config.minW || 1;
+  const minH = config.minH || 1;
+  const maxW = config.maxW || minW;
+  const maxH = config.maxH || minH;
+  const fallbackW = config.defaultW || minW;
+  const fallbackH = config.defaultH || minH;
+  const rawW = Number.isFinite(item.w) ? item.w : fallbackW;
+  const rawH = Number.isFinite(item.h) ? item.h : fallbackH;
+
+  return {
+    ...item,
+    w: Math.max(minW, Math.min(maxW, Math.round(rawW))),
+    h: Math.max(minH, Math.min(maxH, Math.round(rawH))),
+  };
+}
+
+export function normalizeWidgetLayout(layout) {
+  if (!Array.isArray(layout)) return [];
+  return layout.map(clampWidgetSize);
+}

@@ -52,6 +52,24 @@
   opacity: 0.42;
 }
 
+@media (display-mode: window-controls-overlay) {
+  .app-header {
+    padding-top: calc(env(titlebar-area-height, 0px) + 1.1rem);
+  }
+}
+
+@supports (-webkit-app-region: drag) {
+  .app-header {
+    -webkit-app-region: drag;
+  }
+
+  .app-header button,
+  .app-header input,
+  .ambient-player-panel {
+    -webkit-app-region: no-drag;
+  }
+}
+
 .glass-panel {
   background:
     linear-gradient(180deg, rgba(250, 247, 239, 0.105), rgba(250, 247, 239, 0.055)),

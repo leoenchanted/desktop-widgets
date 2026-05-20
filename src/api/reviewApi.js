@@ -1,13 +1,12 @@
 import { v4 as uuidv4 } from 'uuid';
 import { getByIndex, getRecord, putRecord } from '../data/localDb';
 
-const WORKSPACE_KEY = 'workspace';
 const now = () => new Date().toISOString();
 
 async function buildReview(date) {
   const [todos, markdown, sessions] = await Promise.all([
     getByIndex('todos', 'date', date),
-    getRecord('markdown_entries', WORKSPACE_KEY),
+    getRecord('markdown_entries', date),
     getByIndex('pomodoro_sessions', 'date', date),
   ]);
 

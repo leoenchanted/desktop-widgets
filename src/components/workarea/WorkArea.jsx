@@ -7,10 +7,11 @@ import DailyReview from './DailyReview';
 import PlaceholderSlot from './PlaceholderSlot';
 import GlassPanel from '../ui/GlassPanel';
 import StatusPill from '../ui/StatusPill';
-import { formatDate, today } from '../../utils/date';
+import { useTodayKey } from '../../hooks/useTodayKey';
+import { formatDate } from '../../utils/date';
 
 const WorkArea = () => {
-  const date = today();
+  const date = useTodayKey();
 
   return (
     <div className="mx-auto flex w-full max-w-[1640px] flex-col gap-4 pb-8 md:min-h-[calc(100vh-230px)]">
@@ -41,16 +42,16 @@ const WorkArea = () => {
 
       <div className="workspace-grid flex-1">
         <aside className="workspace-stack">
-          <PomodoroTimer />
-          <DailyReview />
+          <PomodoroTimer todayKey={date} />
+          <DailyReview todayKey={date} />
         </aside>
 
         <main className="min-h-[520px] min-w-0 md:min-h-[620px]">
-          <MarkdownEditor />
+          <MarkdownEditor todayKey={date} />
         </main>
 
         <aside className="workspace-stack">
-          <TodoList />
+          <TodoList todayKey={date} />
           <PlaceholderSlot title="灵感暂存" description="待扩展" />
         </aside>
       </div>

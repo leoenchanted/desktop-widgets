@@ -142,6 +142,19 @@
   transform: scale(0.97);
 }
 
+.draft-toolbar-button {
+  transform: translateZ(0);
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    opacity 160ms ease;
+}
+
+.draft-toolbar-button:active {
+  transform: translateZ(0);
+}
+
 .workspace-grid {
   display: grid;
   grid-template-columns: minmax(230px, 280px) minmax(420px, 1fr) minmax(280px, 340px);
@@ -282,9 +295,39 @@
     inset 0 1px 0 rgba(250, 247, 239, 0.14);
 }
 
-.ambient-bar {
-  animation: ambientPulse 920ms ease-in-out infinite;
-  transform-origin: center;
+.ambient-wave {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+  height: 0.625rem;
+  width: 1.8rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.075);
+}
+
+.ambient-wave::before {
+  content: "";
+  position: absolute;
+  left: 0.25rem;
+  top: 50%;
+  height: 0.25rem;
+  width: 0.55rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.34);
+  transform: translateY(-50%);
+}
+
+.ambient-wave.is-active {
+  background: rgba(154, 233, 189, 0.13);
+  box-shadow: inset 0 0 0 1px rgba(154, 233, 189, 0.12);
+}
+
+.ambient-wave.is-active::before {
+  animation: ambientDrift 1.35s ease-in-out infinite;
+  background: linear-gradient(90deg, rgba(154, 233, 189, 0.95), rgba(156, 201, 255, 0.9));
+  box-shadow: 0 0 10px rgba(154, 233, 189, 0.26);
 }
 
 .ambient-volume {
@@ -333,16 +376,16 @@
   width: 12px;
 }
 
-@keyframes ambientPulse {
+@keyframes ambientDrift {
   0%,
   100% {
-    transform: scaleY(0.58);
-    opacity: 0.48;
+    transform: translate(0, -50%);
+    width: 0.5rem;
   }
 
   50% {
-    transform: scaleY(1.25);
-    opacity: 1;
+    transform: translate(0.8rem, -50%);
+    width: 0.8rem;
   }
 }
 

@@ -7,7 +7,7 @@ import GlassPanel from '../ui/GlassPanel';
 import PanelHeader from '../ui/PanelHeader';
 import EmptyState from '../ui/EmptyState';
 
-const TodoList = () => {
+const TodoList = ({ todayKey }) => {
   const {
     items,
     currentDate,
@@ -23,6 +23,10 @@ const TodoList = () => {
   } = useTodoStore();
 
   const [newText, setNewText] = useState('');
+
+  useEffect(() => {
+    setCurrentDate(todayKey);
+  }, [setCurrentDate, todayKey]);
 
   useEffect(() => {
     fetchTodos(currentDate);

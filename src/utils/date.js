@@ -11,6 +11,12 @@ export function today() {
   return localDateKey();
 }
 
+export function millisecondsUntilNextDay(date = new Date()) {
+  const next = new Date(date);
+  next.setHours(24, 0, 1, 0);
+  return Math.max(1000, next.getTime() - date.getTime());
+}
+
 export function parseDateKey(dateStr) {
   return new Date(`${dateStr}T00:00:00`);
 }

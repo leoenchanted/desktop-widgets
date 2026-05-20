@@ -66,19 +66,10 @@ async function sampleExists(src) {
 }
 
 const SoundBars = ({ active }) => (
-  <span className="flex h-5 items-center gap-[3px]" aria-hidden="true">
-    {[0, 1, 2].map((index) => (
-      <span
-        key={index}
-        className={`ambient-bar block w-[3px] rounded-full ${active ? 'bg-[#9ae9bd]/80' : 'bg-white/28'}`}
-        style={{
-          height: active ? `${8 + index * 3}px` : '5px',
-          animationDelay: `${index * 140}ms`,
-          animationPlayState: active ? 'running' : 'paused',
-        }}
-      />
-    ))}
-  </span>
+  <span
+    className={`ambient-wave ${active ? 'is-active' : ''}`}
+    aria-hidden="true"
+  />
 );
 
 const AmbientPlayer = ({ className = '' }) => {

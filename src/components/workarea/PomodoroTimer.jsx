@@ -8,7 +8,7 @@ const RADIUS = 56;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 const DURATION_PRESETS = [15, 25, 45];
 
-const PomodoroTimer = () => {
+const PomodoroTimer = ({ todayKey }) => {
   const {
     minutes,
     seconds,
@@ -22,15 +22,17 @@ const PomodoroTimer = () => {
     pause,
     reset,
     cleanup,
-    currentDate,
-    fetchSessions,
+    setCurrentDate,
   } = usePomodoroStore();
 
   useEffect(() => {
     initializeDuration();
-    fetchSessions(currentDate);
     return () => cleanup();
-  }, [cleanup, currentDate, fetchSessions, initializeDuration]);
+  }, [cleanup, initializeDuration]);
+
+  useEffect(() => {
+    setCurrentDate(todayKey);
+  }, [setCurrentDate, todayKey]);
 
   const formatTime = (m, s) => `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
   const remainingSeconds = minutes * 60 + seconds;

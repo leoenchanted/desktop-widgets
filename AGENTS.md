@@ -119,6 +119,7 @@ npm run start
 - 不支持拖动进度。
 - 只保留环境音选择、播放/暂停、音量、静音和播放状态。
 - 环境音下拉选项必须是绝对定位浮层，不能撑开 Header 或把页面内容顶下去。
+- 播放状态指示不要使用方块或竖条跳动动画，避免在玻璃面板上出现黑边闪动；优先使用细胶囊或柔和点状状态。
 
 环境音配置：
 
@@ -165,6 +166,7 @@ IndexedDB settings 字段：
 - 运行中修改时长不强制重置当前倒计时；未运行时修改时长会重置当前显示时间。
 - 完成记录里的 `duration` 必须使用实际设置的时长，今日专注分钟数应按历史 session 的 duration 求和。
 - 番茄钟在工作区侧栏窄卡片里必须完整显示；新增控件时要按 280px 左右宽度检查，不能让时长按钮、圆环或统计区溢出。
+- 页面跨天时，番茄钟 `currentDate` 和今日统计必须自动切到新日期；如果计时器正在运行，不要强制打断当前倒计时。
 
 ## 组件区尺寸规则
 
@@ -204,7 +206,7 @@ IndexedDB stores：
 - `settings`：应用设置，例如用户名、当前分区、壁纸类型、持久化存储状态、备份提醒时间。
 - `widgets`：组件布局和组件实例配置，例如 `layout`、`image:<widgetId>`。
 - `todos`：任务清单，按 `date` 建索引。
-- `markdown_entries`：Markdown 草稿；长期草稿固定使用 `date = "workspace"`。
+- `markdown_entries`：Markdown 按日草稿，主键使用本地日期 `YYYY-MM-DD`；旧版 `date = "workspace"` 只作为迁移兼容来源。
 - `daily_reviews`：每日回顾，按日期保存当天汇总和手写备注。
 - `pomodoro_sessions`：番茄钟完成记录，按 `date` 建索引。
 - `assets`：本地图片/壁纸 Blob，按 `type` 建索引。
@@ -229,6 +231,12 @@ new Date().toISOString().slice(0, 10)
 
 原因：它是 UTC 日期，在 Asia/Shanghai 凌晨时可能串到前一天。
 
+跨天刷新规则：
+
+- 页面保持打开跨过本地 0 点时，必须用 `src/hooks/useTodayKey.js` 触发日期更新，不要只在组件初次加载时读取一次 `today()`。
+- Todo、番茄钟今日统计和今日回顾都应该响应 `todayKey` 变化自动刷新到新一天。
+- 今日回顾保留手动刷新按钮，同时可以根据 Todo、番茄钟和 Markdown 字数变化做轻量自动刷新。
+
 ## Markdown 规则
 
 Markdown 相关文件：
@@ -238,6 +246,13 @@ Markdown 相关文件：
 - `src/store/useMarkdownStore.js`
 - `src/styles/animations.css`
 - `src/utils/sanitizeHtml.js`
+
+草稿保存规则：
+
+- 新草稿必须按本地日期保存，`date` 使用 `YYYY-MM-DD`。
+- 页面跨天时，编辑器必须自动切到新一天空白草稿。
+- 用户必须能通过日期选择器回看历史日期草稿。
+- 旧版 `workspace` 长期草稿不能丢失，导入或首次读取时按 `updated_at/created_at` 推断日期，推不出来才落到今天。
 
 预览必须正确支持：
 
@@ -251,6 +266,15 @@ Markdown 相关文件：
 - 分割线
 
 修改 Markdown 渲染时，不要绕过 `sanitizeHtml`。
+
+日记草稿导出规则：
+
+- `MarkdownEditor` 必须保留导出 TXT 入口。
+- 导出前先保存当前草稿内容。
+- TXT 文件使用 UTF-8，并带 BOM 以减少 Windows 中文乱码。
+- 文件名格式保持类似 `desktop-widgets-draft-YYYY-MM-DD.txt`。
+- `MarkdownEditor` 必须保留“清空当前日期草稿”和“撤回清空”入口，防止误清空后无法恢复。
+- 编辑器工具栏里的图标按钮要保持稳定尺寸和稳定按压反馈，不要继承会导致闪烁的缩放式 active 动画。
 
 ## 壁纸规则
 
@@ -283,7 +307,7 @@ desktop-widgets-backup-YYYY-MM-DD.json
 
 ```json
 {
-  "version": 2,
+  "version": 3,
   "app": "desktop-widgets",
   "storage": "indexeddb",
   "exportedAt": "2026-05-19T00:00:00.000Z",
@@ -300,6 +324,12 @@ desktop-widgets-backup-YYYY-MM-DD.json
 ```
 
 `assets` 导出时会把 Blob 转成 `dataUrl`，导入时再转回 Blob 存进 IndexedDB。修改备份格式时必须提高 `version`，并在导入逻辑里兼容旧格式。
+
+Markdown 备份兼容规则：
+
+- v2 及更早版本可能存在 `markdown_entries[].date = "workspace"`。
+- 导入时必须把 `workspace` 草稿迁移为按日草稿，优先使用 `updated_at`，其次 `created_at`，最后使用今天。
+- 如果迁移目标日期已经有草稿内容，必须合并内容，不能直接覆盖。
 
 备份提醒规则：
 

@@ -2,7 +2,9 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { FaChartLine, FaSyncAlt } from 'react-icons/fa';
 import { useDebounce } from '../../hooks/useDebounce';
 import { reviewApi } from '../../api/reviewApi';
-import { today } from '../../utils/date';
+import { useMarkdownStore } from '../../store/useMarkdownStore';
+import { usePomodoroStore } from '../../store/usePomodoroStore';
+import { useTodoStore } from '../../store/useTodoStore';
 import GlassPanel from '../ui/GlassPanel';
 import PanelHeader from '../ui/PanelHeader';
 
@@ -13,17 +15,29 @@ const Metric = ({ value, label, tone = 'text-white' }) => (
   </div>
 );
 
-const DailyReview = () => {
+const DailyReview = ({ todayKey }) => {
   const [review, setReview] = useState(null);
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const currentDate = today();
+  const currentDate = todayKey;
   const debouncedNotes = useDebounce(notes, 500);
+  const todoDigest = useTodoStore((state) => {
+    const completed = state.items.filter((item) => Boolean(item.completed)).length;
+    return `${state.currentDate}:${state.items.length}:${completed}`;
+  });
+  const pomodoroDigest = usePomodoroStore((state) =>
+    `${state.currentDate}:${state.sessionCount}:${state.focusMinutes}`);
+  const markdownWordCount = useMarkdownStore((state) => state.wordCount);
+  const autoRefreshKey = useDebounce(
+    `${currentDate}:${todoDigest}:${pomodoroDigest}:${markdownWordCount}`,
+    1200,
+  );
   const editedRef = useRef(false);
+  const lastAutoRefreshRef = useRef('');
 
-  const generate = useCallback(async () => {
-    setRefreshing(true);
+  const generate = useCallback(async ({ silent = false } = {}) => {
+    if (!silent) setRefreshing(true);
     try {
       const nextReview = await reviewApi.generate(currentDate);
       setReview(nextReview);
@@ -31,7 +45,7 @@ const DailyReview = () => {
     } catch (error) {
       console.error('Failed to generate daily review', error);
     } finally {
-      setRefreshing(false);
+      if (!silent) setRefreshing(false);
     }
   }, [currentDate]);
 
@@ -39,6 +53,9 @@ const DailyReview = () => {
     let cancelled = false;
 
     (async () => {
+      editedRef.current = false;
+      setReview(null);
+      setNotes('');
       setLoading(true);
       try {
         const nextReview = await reviewApi.getByDate(currentDate);
@@ -64,11 +81,18 @@ const DailyReview = () => {
   }, [currentDate, generate]);
 
   useEffect(() => {
-    if (!editedRef.current || !review) return;
+    if (!editedRef.current || !review || review.date !== currentDate) return;
     reviewApi.saveNotes(currentDate, debouncedNotes).catch((error) => {
       console.error('Failed to save review notes', error);
     });
   }, [currentDate, debouncedNotes, review]);
+
+  useEffect(() => {
+    if (loading || refreshing || !review || review.date !== currentDate) return;
+    if (lastAutoRefreshRef.current === autoRefreshKey) return;
+    lastAutoRefreshRef.current = autoRefreshKey;
+    generate({ silent: true });
+  }, [autoRefreshKey, currentDate, generate, loading, refreshing, review]);
 
   const completionRate = review?.todo_total
     ? Math.round((review.todo_completed / review.todo_total) * 100)
@@ -82,7 +106,7 @@ const DailyReview = () => {
         icon={FaChartLine}
         action={
           <button
-            onClick={generate}
+            onClick={() => generate()}
             disabled={refreshing}
             className="glass-control flex h-9 w-9 items-center justify-center text-white/55 hover:text-white disabled:opacity-40"
             title="刷新回顾"

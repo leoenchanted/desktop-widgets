@@ -1,35 +1,46 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { FaBookmark, FaCheck, FaEye, FaPenNib } from 'react-icons/fa';
+import { FaBookmark, FaCheck, FaDownload, FaEye, FaPenNib, FaTrashAlt, FaUndo } from 'react-icons/fa';
 import { useMarkdownStore } from '../../store/useMarkdownStore';
 import { useDebounce } from '../../hooks/useDebounce';
 import MarkdownPreview from './MarkdownPreview';
+import DatePickerPopover from './DatePickerPopover';
 import StatsBar from './StatsBar';
 import GlassPanel from '../ui/GlassPanel';
+import IconButton from '../ui/IconButton';
 import PanelHeader from '../ui/PanelHeader';
 import SegmentedControl from '../ui/SegmentedControl';
 import StatusPill from '../ui/StatusPill';
 
-const MarkdownEditor = () => {
+const MarkdownEditor = ({ todayKey }) => {
   const {
     content,
     wordCount,
     charCount,
     loading,
+    datesWithData,
     setContent,
     saveContent,
     fetchContent,
+    fetchDates,
+    setCurrentDate,
     currentDate,
   } = useMarkdownStore();
   const debouncedContent = useDebounce(content, 500);
   const [mode, setMode] = useState('edit');
   const [saveState, setSaveState] = useState('idle');
+  const [clearedDraft, setClearedDraft] = useState(null);
   const textareaRef = useRef(null);
   const hasEditedRef = useRef(false);
 
   useEffect(() => {
+    setCurrentDate(todayKey);
+  }, [setCurrentDate, todayKey]);
+
+  useEffect(() => {
     hasEditedRef.current = false;
     fetchContent(currentDate);
-  }, [currentDate, fetchContent]);
+    fetchDates();
+  }, [currentDate, fetchContent, fetchDates]);
 
   useEffect(() => {
     if (!hasEditedRef.current || loading) return;
@@ -65,7 +76,55 @@ const MarkdownEditor = () => {
 
   const handleChange = (value) => {
     hasEditedRef.current = true;
+    setClearedDraft(null);
     setContent(value);
+  };
+
+  const handleExportTxt = async () => {
+    if (loading) return;
+
+    setSaveState('saving');
+    try {
+      if (hasEditedRef.current) await saveContent();
+      const blob = new Blob(['\ufeff', content], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `desktop-widgets-draft-${currentDate}.txt`;
+      a.click();
+      URL.revokeObjectURL(url);
+      setSaveState('saved');
+    } catch (error) {
+      console.error('Failed to export markdown draft as txt', error);
+      setSaveState('error');
+    }
+  };
+
+  const persistAfterProgrammaticChange = async () => {
+    setSaveState('saving');
+    try {
+      await saveContent();
+      setSaveState('saved');
+    } catch (error) {
+      console.error('Failed to save markdown draft', error);
+      setSaveState('error');
+    }
+  };
+
+  const handleClear = async () => {
+    if (!content || loading) return;
+    setClearedDraft({ content, date: currentDate });
+    hasEditedRef.current = true;
+    setContent('');
+    await persistAfterProgrammaticChange();
+  };
+
+  const handleUndoClear = async () => {
+    if (!clearedDraft || clearedDraft.date !== currentDate || loading) return;
+    hasEditedRef.current = true;
+    setContent(clearedDraft.content);
+    setClearedDraft(null);
+    await persistAfterProgrammaticChange();
   };
 
   const handleKeyDown = (e) => {
@@ -100,8 +159,32 @@ const MarkdownEditor = () => {
           title="日记草稿"
           icon={FaPenNib}
           action={
-            <div className="flex items-center gap-2">
-              <StatusPill variant={saveState === 'error' ? 'warning' : 'success'}>
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <IconButton
+                icon={FaDownload}
+                onClick={handleExportTxt}
+                disabled={loading}
+                title="导出 TXT"
+                className="draft-toolbar-button h-9 w-9 text-white/55 disabled:opacity-40"
+              />
+              <IconButton
+                icon={FaTrashAlt}
+                onClick={handleClear}
+                disabled={loading || !content}
+                title="清空当前日期草稿"
+                className="draft-toolbar-button h-9 w-9 text-white/50 hover:text-[#ffd0d0] disabled:opacity-35"
+              />
+              <IconButton
+                icon={FaUndo}
+                onClick={handleUndoClear}
+                disabled={loading || !clearedDraft || clearedDraft.date !== currentDate}
+                title="撤回清空"
+                className="draft-toolbar-button h-9 w-9 text-white/50 hover:text-[#bdf6d3] disabled:opacity-35"
+              />
+              <StatusPill
+                variant={saveState === 'error' ? 'warning' : 'success'}
+                className="min-w-[4.75rem] justify-center"
+              >
                 {saveState === 'saved' && <FaCheck className="mr-1.5" size={10} />}
                 {status}
               </StatusPill>
@@ -115,6 +198,14 @@ const MarkdownEditor = () => {
               />
             </div>
           }
+        />
+      </div>
+
+      <div className="px-5 pb-3">
+        <DatePickerPopover
+          currentDate={currentDate}
+          onDateChange={setCurrentDate}
+          datesWithData={datesWithData}
         />
       </div>
 
@@ -159,7 +250,7 @@ const MarkdownEditor = () => {
           extra={
             <span className="flex items-center gap-1.5">
               <FaBookmark size={10} />
-              长期草稿
+              按日草稿
             </span>
           }
         />

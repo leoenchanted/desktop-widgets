@@ -1,23 +1,24 @@
 import { create } from 'zustand';
 import { markdownApi } from '../api/markdownApi';
-
-export const WORKSPACE_DRAFT_KEY = 'workspace';
+import { today } from '../utils/date';
 
 export const useMarkdownStore = create((set, get) => ({
   content: '',
-  currentDate: WORKSPACE_DRAFT_KEY,
+  currentDate: today(),
   wordCount: 0,
   charCount: 0,
   loading: false,
+  datesWithData: [],
 
-  setCurrentDate: async () => {
-    await get().fetchContent(WORKSPACE_DRAFT_KEY);
+  setCurrentDate: async (date = today()) => {
+    await get().fetchContent(date);
   },
 
-  fetchContent: async (date = WORKSPACE_DRAFT_KEY) => {
-    set({ currentDate: WORKSPACE_DRAFT_KEY, loading: true });
+  fetchContent: async (date = today()) => {
+    const key = date || today();
+    set({ currentDate: key, loading: true });
     try {
-      const entry = await markdownApi.getByDate(date);
+      const entry = await markdownApi.getByDate(key);
       set({
         content: entry.content || '',
         wordCount: entry.word_count || 0,
@@ -36,12 +37,22 @@ export const useMarkdownStore = create((set, get) => ({
   },
 
   saveContent: async () => {
-    const { content } = get();
-    const entry = await markdownApi.save(WORKSPACE_DRAFT_KEY, content);
+    const { content, currentDate } = get();
+    const entry = await markdownApi.save(currentDate, content);
     set({
       wordCount: entry.word_count,
       charCount: entry.char_count,
     });
+    get().fetchDates();
     return entry;
+  },
+
+  fetchDates: async () => {
+    try {
+      const dates = await markdownApi.getAllDates();
+      set({ datesWithData: dates });
+    } catch (error) {
+      console.error('Failed to fetch markdown dates', error);
+    }
   },
 }));

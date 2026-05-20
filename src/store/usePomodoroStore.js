@@ -42,6 +42,19 @@ export const usePomodoroStore = create((set, get) => ({
     }));
   },
 
+  setCurrentDate: async (date) => {
+    const { currentDate, durationMinutes, isRunning } = get();
+    if (currentDate !== date) {
+      set({
+        currentDate: date,
+        sessionCount: 0,
+        focusMinutes: 0,
+        ...(isRunning ? {} : { minutes: durationMinutes, seconds: 0 }),
+      });
+    }
+    await get().fetchSessions(date);
+  },
+
   start: () => {
     const { intervalId } = get();
     if (intervalId) return;

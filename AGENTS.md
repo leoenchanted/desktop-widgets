@@ -340,6 +340,17 @@ Markdown 备份兼容规则：
 - 超过 7 天未导出时，前端显示备份提醒。
 - 设置项 `backupReminderSnoozedAt` 记录当天稍后提醒。
 
+## 域名迁移警告
+
+域名即将失效或迁移时，必须优先保护用户本地 IndexedDB 数据：
+
+- 全局迁移弹窗组件在 `src/components/DomainMigrationWarning.jsx`。
+- 旧域名打开应用时必须立即提醒用户导出完整 JSON 备份，并引导迁移到 `https://desktop.leoenchanted.top`。
+- 用户关闭弹窗后，每 30 分钟必须再次弹出提醒，避免长时间不刷新页面的用户错过备份。
+- 新目标域名 `desktop.leoenchanted.top` 本身不要显示旧域名失效警告，避免用户迁移完成后仍被误导。
+- 本地开发域名 `localhost`、`127.0.0.1` 默认不弹出；需要测试时可以在 URL 加 `?forceMigrationWarning=1`。
+- 弹窗里必须保留一键导出 JSON 入口，直接调用现有完整备份逻辑，不要另写一套不完整导出。
+
 ## 验证要求
 
 每次改完代码至少运行：

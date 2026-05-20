@@ -10,6 +10,7 @@ import ExportImportPanel from './components/ExportImportPanel';
 import BackupReminder from './components/BackupReminder';
 import ChangelogPanel from './components/ChangelogPanel';
 import WallpaperPanel from './components/WallpaperPanel';
+import DomainMigrationWarning from './components/DomainMigrationWarning';
 import { useSettingsStore } from './store/useSettingsStore';
 import { useCommandPalette } from './hooks/useCommandPalette';
 import { useWindowControlsOverlay } from './hooks/useWindowControlsOverlay';
@@ -234,6 +235,7 @@ function App() {
       <Layout widgetBoard={widgetBoard} workArea={<WorkArea />} />
 
       <BackupReminder onOpenBackup={() => setShowExportImport(true)} />
+      <DomainMigrationWarning />
 
       {cmdPalette.isOpen && (
         <CommandPalette

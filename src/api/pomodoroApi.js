@@ -9,15 +9,15 @@ export const pomodoroApi = {
     return sessions.sort((a, b) => (a.created_at || '').localeCompare(b.created_at || ''));
   },
 
-  create: async (date, duration) => {
+  create: async (date, duration, metadata = {}) => {
     const timestamp = now();
     const session = {
       id: uuidv4(),
       date,
       duration,
       completed: 1,
-      started_at: timestamp,
-      ended_at: timestamp,
+      started_at: metadata.startedAt || timestamp,
+      ended_at: metadata.endedAt || timestamp,
       created_at: timestamp,
     };
     await putRecord('pomodoro_sessions', session);

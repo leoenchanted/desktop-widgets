@@ -163,10 +163,13 @@ IndexedDB settings 字段：
 - 默认时长保持 25 分钟。
 - 用户可以设置时长，允许范围 5-120 分钟。
 - 设置项保存到 IndexedDB `settings.pomodoroDuration`。
+- 运行中或暂停中的番茄钟状态保存到 IndexedDB `settings.pomodoroActiveSession`，用于 PWA 后台恢复和页面刷新恢复。
 - 运行中修改时长不强制重置当前倒计时；未运行时修改时长会重置当前显示时间。
 - 完成记录里的 `duration` 必须使用实际设置的时长，今日专注分钟数应按历史 session 的 duration 求和。
 - 番茄钟在工作区侧栏窄卡片里必须完整显示；新增控件时要按 280px 左右宽度检查，不能让时长按钮、圆环或统计区溢出。
 - 页面跨天时，番茄钟 `currentDate` 和今日统计必须自动切到新日期；如果计时器正在运行，不要强制打断当前倒计时。
+- 番茄钟倒计时必须使用 deadline-based 真实时间模型：开始时记录 `startedAt` 和 `endsAt`，显示时用 `endsAt - Date.now()` 计算剩余时间；`setInterval` 只能用来刷新 UI，不能作为真实计时来源。
+- 页面从后台恢复、窗口重新聚焦或 PWA 被系统节流后，必须调用 `syncWithClock` 校准剩余时间；如果已经过了 `endsAt`，自动完成本次番茄钟。
 
 ## 组件区尺寸规则
 

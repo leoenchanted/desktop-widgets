@@ -23,6 +23,7 @@ const PomodoroTimer = ({ todayKey }) => {
     reset,
     cleanup,
     setCurrentDate,
+    syncWithClock,
   } = usePomodoroStore();
 
   useEffect(() => {
@@ -33,6 +34,20 @@ const PomodoroTimer = ({ todayKey }) => {
   useEffect(() => {
     setCurrentDate(todayKey);
   }, [setCurrentDate, todayKey]);
+
+  useEffect(() => {
+    const handleResume = () => {
+      syncWithClock();
+    };
+
+    window.addEventListener('focus', handleResume);
+    document.addEventListener('visibilitychange', handleResume);
+
+    return () => {
+      window.removeEventListener('focus', handleResume);
+      document.removeEventListener('visibilitychange', handleResume);
+    };
+  }, [syncWithClock]);
 
   const formatTime = (m, s) => `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
   const remainingSeconds = minutes * 60 + seconds;

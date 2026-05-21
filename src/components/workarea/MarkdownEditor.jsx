@@ -211,13 +211,13 @@ const MarkdownEditor = ({ todayKey }) => {
 
       <div className="soft-divider" />
 
-      <div className="relative flex-1 overflow-hidden">
+      <div className="relative min-h-0 flex-1 overflow-hidden">
         {loading ? (
           <div className="flex h-full items-center justify-center text-sm text-white/35">
             加载中...
           </div>
         ) : mode === 'preview' ? (
-          <div className="h-full overflow-y-auto p-4 glass-scrollbar md:p-6">
+          <div className="h-full min-h-0 overflow-y-auto p-4 glass-scrollbar md:p-6">
             {content ? (
               <div className="markdown-paper min-h-full p-5 md:p-7">
                 <MarkdownPreview content={content} />

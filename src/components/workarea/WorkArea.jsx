@@ -46,7 +46,7 @@ const WorkArea = () => {
           <DailyReview todayKey={date} />
         </aside>
 
-        <main className="min-h-[520px] min-w-0 md:min-h-[620px]">
+        <main className="h-[min(72svh,680px)] min-h-[520px] min-w-0 md:h-[clamp(620px,calc(100svh-260px),780px)] md:min-h-0">
           <MarkdownEditor todayKey={date} />
         </main>
 

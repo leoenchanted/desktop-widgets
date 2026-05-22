@@ -2,6 +2,7 @@ import React, { useRef, useState } from 'react';
 import { FaDatabase, FaDownload, FaTimes, FaUpload } from 'react-icons/fa';
 import { exportBackup, importBackup } from '../utils/backup';
 import IconButton from './ui/IconButton';
+import AutoBackupSettings from './AutoBackupSettings';
 
 const ExportImportPanel = ({ onClose }) => {
   const [status, setStatus] = useState(null);
@@ -52,7 +53,7 @@ const ExportImportPanel = ({ onClose }) => {
     <div className="fixed inset-0 z-[9999] flex items-center justify-center px-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/42 backdrop-blur-sm" />
       <div
-        className="glass-panel relative w-full max-w-md overflow-hidden p-0 shadow-2xl animate-bubble"
+        className="glass-panel relative max-h-[min(88vh,820px)] w-full max-w-2xl overflow-hidden p-0 shadow-2xl animate-bubble"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-4 border-b border-white/10 px-5 py-5">
@@ -69,46 +70,53 @@ const ExportImportPanel = ({ onClose }) => {
           <IconButton icon={FaTimes} onClick={onClose} title="关闭" className="h-9 w-9" />
         </div>
 
-        <div className="grid gap-3 p-5">
-          <button
-            onClick={handleExport}
-            disabled={status === 'exporting' || importing}
-            className="glass-control flex items-center gap-3 px-4 py-4 text-left disabled:opacity-40"
-          >
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#80bfff]/16 text-[#b7dcff]">
-              <FaDownload size={15} />
-            </span>
-            <span>
-              <span className="block text-sm font-semibold text-white/84">导出完整 JSON</span>
-              <span className="mt-0.5 block text-xs text-white/34">建议至少每 7 天导出一次</span>
-            </span>
-          </button>
+        <div className="max-h-[calc(min(88vh,820px)-112px)] overflow-y-auto glass-scrollbar">
+          <div className="grid gap-3 p-5">
+            <button
+              onClick={handleExport}
+              disabled={status === 'exporting' || importing}
+              className="glass-control flex items-center gap-3 px-4 py-4 text-left disabled:opacity-40"
+            >
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#80bfff]/16 text-[#b7dcff]">
+                <FaDownload size={15} />
+              </span>
+              <span>
+                <span className="block text-sm font-semibold text-white/84">导出完整 JSON</span>
+                <span className="mt-0.5 block text-xs text-white/34">最稳的跨域名、换电脑、清浏览器前兜底备份</span>
+              </span>
+            </button>
 
-          <button
-            onClick={() => fileRef.current?.click()}
-            disabled={importing}
-            className="glass-control flex items-center gap-3 px-4 py-4 text-left disabled:opacity-40"
-          >
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#7ee7ad]/14 text-[#bdf6d3]">
-              <FaUpload size={15} />
-            </span>
-            <span>
-              <span className="block text-sm font-semibold text-white/84">导入 JSON</span>
-              <span className="mt-0.5 block text-xs text-white/34">会覆盖当前浏览器里的本地数据</span>
-            </span>
-          </button>
-          <input ref={fileRef} type="file" accept=".json,application/json" hidden onChange={handleImport} />
-        </div>
-
-        {status && (
-          <div className={`mx-5 mb-5 rounded-2xl border px-3 py-2 text-center text-xs font-medium ${statusClass}`}>
-            {status === 'exporting' && '正在导出...'}
-            {status === 'importing' && '正在导入...'}
-            {status === 'error' && '操作失败，请重试'}
-            {status === 'exported' && '导出成功'}
-            {status.startsWith('导入') && status}
+            <button
+              onClick={() => fileRef.current?.click()}
+              disabled={importing}
+              className="glass-control flex items-center gap-3 px-4 py-4 text-left disabled:opacity-40"
+            >
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#7ee7ad]/14 text-[#bdf6d3]">
+                <FaUpload size={15} />
+              </span>
+              <span>
+                <span className="block text-sm font-semibold text-white/84">导入 JSON</span>
+                <span className="mt-0.5 block text-xs text-white/34">会覆盖当前浏览器里的本地数据，请确认文件来源</span>
+              </span>
+            </button>
+            <input ref={fileRef} type="file" accept=".json,application/json" hidden onChange={handleImport} />
           </div>
-        )}
+
+          {status && (
+            <div className={`mx-5 mb-5 rounded-2xl border px-3 py-2 text-center text-xs font-medium ${statusClass}`}>
+              {status === 'exporting' && '正在导出...'}
+              {status === 'importing' && '正在导入...'}
+              {status === 'error' && '操作失败，请重试'}
+              {status === 'exported' && '导出成功'}
+              {status.startsWith('导入') && status}
+            </div>
+          )}
+
+          <div className="soft-divider" />
+          <div className="p-5">
+            <AutoBackupSettings />
+          </div>
+        </div>
       </div>
     </div>
   );

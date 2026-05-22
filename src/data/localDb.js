@@ -1,7 +1,7 @@
 const DB_NAME = 'desktop-widgets-local';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
-const STORES = ['settings', 'widgets', 'todos', 'markdown_entries', 'daily_reviews', 'pomodoro_sessions', 'assets'];
+const DATA_STORES = ['settings', 'widgets', 'todos', 'markdown_entries', 'daily_reviews', 'pomodoro_sessions', 'assets'];
 
 let dbPromise;
 
@@ -37,6 +37,10 @@ function openDb() {
       if (!db.objectStoreNames.contains('assets')) {
         const store = db.createObjectStore('assets', { keyPath: 'id' });
         store.createIndex('type', 'type', { unique: false });
+      }
+      if (!db.objectStoreNames.contains('backup_snapshots')) {
+        const store = db.createObjectStore('backup_snapshots', { keyPath: 'id' });
+        store.createIndex('created_at', 'created_at', { unique: false });
       }
     };
 
@@ -96,18 +100,18 @@ export async function setSetting(key, value) {
 
 export async function exportAllStores() {
   const data = {};
-  for (const name of STORES) {
+  for (const name of DATA_STORES) {
     data[name] = await getAllRecords(name);
   }
   return data;
 }
 
 export async function importAllStores(data) {
-  for (const name of STORES) {
+  for (const name of DATA_STORES) {
     await clearStore(name);
   }
 
-  for (const name of STORES) {
+  for (const name of DATA_STORES) {
     const rows = data[name] || [];
     for (const row of rows) {
       await putRecord(name, row);

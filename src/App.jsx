@@ -14,6 +14,7 @@ import DomainMigrationWarning from './components/DomainMigrationWarning';
 import { useSettingsStore } from './store/useSettingsStore';
 import { useCommandPalette } from './hooks/useCommandPalette';
 import { useWindowControlsOverlay } from './hooks/useWindowControlsOverlay';
+import { useAutoBackup } from './hooks/useAutoBackup';
 import WorkArea from './components/workarea/WorkArea';
 import IconButton from './components/ui/IconButton';
 import { WIDGET_REGISTRY, normalizeWidgetLayout } from './config/widgetRegistry';
@@ -82,6 +83,7 @@ function App() {
   } = useSettingsStore();
   const cmdPalette = useCommandPalette();
   useWindowControlsOverlay();
+  useAutoBackup(dataReady);
 
   useEffect(() => {
     let cancelled = false;

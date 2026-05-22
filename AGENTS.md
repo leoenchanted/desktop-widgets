@@ -87,6 +87,15 @@ npm run start
 
 新增 UI 时优先复用这些组件，不要到处写一套新的 `bg-white/10 border rounded`。
 
+## 更新日志规则
+
+更新日志数据在 `src/data/changelog.js`，展示组件在 `src/components/ChangelogPanel.jsx`：
+
+- 日志展示必须按日期分组，同一天多次更新只显示一个日期节点。
+- `CHANGELOG` 数据可以继续按单条改动追加，但 `ChangelogPanel` 必须把相同 `date` 的记录归档到同一个日期下。
+- 新增日志时优先把标题写成具体功能点，不要把同一天的日期重复做成多个时间轴节点。
+- 如果后续改成真正的分组数据结构，也必须兼容旧的扁平数组格式。
+
 ## 移动端与 PWA
 
 项目需要支持手机访问，目标是接近轻量 PWA：
@@ -213,6 +222,7 @@ IndexedDB stores：
 - `daily_reviews`：每日回顾，按日期保存当天汇总和手写备注。
 - `pomodoro_sessions`：番茄钟完成记录，按 `date` 建索引。
 - `assets`：本地图片/壁纸 Blob，按 `type` 建索引。
+- `backup_snapshots`：自动备份内部快照，不进入普通完整 JSON 导出，用户可以从备份面板里恢复。
 
 `localStorage` 只作为旧数据迁移来源：
 
@@ -340,6 +350,17 @@ Markdown 备份兼容规则：
 - 设置项 `lastBackupAt` 记录最近一次导出时间。
 - 超过 7 天未导出时，前端显示备份提醒。
 - 设置项 `backupReminderSnoozedAt` 记录当天稍后提醒。
+
+自动备份规则：
+
+- 自动备份逻辑在 `src/api/autoBackupApi.js` 和 `src/hooks/useAutoBackup.js`。
+- 默认开启 IndexedDB 内部自动快照，默认频率 1 小时；可选 30 分钟、1 小时、6 小时。
+- 内部快照保存到 `backup_snapshots`，用于误删后从浏览器本地恢复，不替代手动 JSON 导出。
+- 快照清理采用分层保留：最近 24 份、最近 7 天每天一份、最近 4 周每周一份，避免无限增长。
+- Chrome / Edge 桌面端支持 File System Access API 时，可以让用户选择电脑备份文件夹，并在自动备份时额外写入 JSON 文件。
+- Safari、Firefox 和多数移动端通常不支持网页写入用户选择的电脑文件夹；UI 必须明确说明限制。
+- `autoBackupDirectoryHandle` 是浏览器授权句柄，只能存在本机 IndexedDB setting 中，不能导出到 JSON。
+- 导入 JSON 或恢复快照时，应尽量保留当前浏览器已经授权的备份文件夹句柄。
 
 ## 域名迁移警告
 

@@ -1,4 +1,4 @@
-import { exportAllStores, importAllStores } from '../data/localDb';
+import { exportAllStores, getSetting, importAllStores, setSetting } from '../data/localDb';
 import { normalizeWidgetLayout } from '../config/widgetRegistry';
 import { LEGACY_WORKSPACE_KEY, countMarkdownWords, inferMarkdownEntryDate } from './markdownApi';
 import { blobToDataUrl, dataUrlToBlob } from '../utils/imageCompression';
@@ -38,6 +38,10 @@ function normalizeWidgetRows(widgets = []) {
       value: normalizeWidgetLayout(row.value),
     };
   });
+}
+
+function serializeSettings(settings = []) {
+  return settings.filter((row) => row?.key !== 'autoBackupDirectoryHandle');
 }
 
 function normalizeMarkdownRows(entries = []) {
@@ -110,6 +114,7 @@ export const backupApi = {
       exportedAt: new Date().toISOString(),
       data: {
         ...data,
+        settings: serializeSettings(data.settings),
         widgets: normalizeWidgetRows(data.widgets),
         markdown_entries: normalizeMarkdownRows(data.markdown_entries),
         assets: await serializeAssets(data.assets),
@@ -118,6 +123,10 @@ export const backupApi = {
   },
 
   import: async (backup) => {
+    const [directoryHandle, fileBackupEnabled] = await Promise.all([
+      getSetting('autoBackupDirectoryHandle'),
+      getSetting('autoBackupFileEnabled'),
+    ]);
     const data = normalizeBackup(backup);
     const hydrated = {
       settings: data.settings || [],
@@ -129,6 +138,10 @@ export const backupApi = {
       assets: hydrateAssets(data.assets || []),
     };
     await importAllStores(hydrated);
+    if (directoryHandle) {
+      await setSetting('autoBackupDirectoryHandle', directoryHandle);
+      await setSetting('autoBackupFileEnabled', fileBackupEnabled ?? false);
+    }
     return { ok: true, counts: countsFor(hydrated) };
   },
 };

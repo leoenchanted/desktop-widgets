@@ -51,8 +51,8 @@ const TodoList = ({ todayKey }) => {
   };
 
   return (
-    <GlassPanel className="relative z-20 flex h-full min-h-[250px] flex-col overflow-visible" padded={false}>
-      <div className="px-4 pb-3 pt-4">
+    <GlassPanel className="todo-list-panel workspace-fixed-panel relative z-20 overflow-hidden" padded={false}>
+      <div className="todo-list-header px-4 pb-3 pt-4">
         <PanelHeader
           eyebrow="Todo"
           title="任务清单"
@@ -100,9 +100,9 @@ const TodoList = ({ todayKey }) => {
         </div>
       </div>
 
-      <div className="soft-divider" />
+      <div className="todo-list-divider soft-divider" />
 
-      <div className="min-h-0 flex-1 overflow-y-auto p-2 glass-scrollbar">
+      <div className="todo-list-scroll absolute bottom-0 left-0 right-0 overflow-y-scroll overscroll-contain p-2 glass-scrollbar">
         {loading ? (
           <div className="flex h-full items-center justify-center text-sm text-white/35">
             加载中...

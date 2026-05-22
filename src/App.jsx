@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { FaDownload, FaHistory, FaKeyboard } from 'react-icons/fa';
+import { FaDownload, FaExclamationTriangle, FaHistory, FaKeyboard, FaRedo } from 'react-icons/fa';
 import SortableBoard from './components/SortableBoard';
 import WidgetPicker from './components/WidgetPicker';
 import Header from './components/Header';
@@ -69,6 +69,7 @@ function legacyLayout() {
 function App() {
   const [items, setItems] = useState(DEFAULT_LAYOUT);
   const [dataReady, setDataReady] = useState(false);
+  const [startupError, setStartupError] = useState('');
   const [layoutReady, setLayoutReady] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
   const [showExportImport, setShowExportImport] = useState(false);
@@ -89,9 +90,16 @@ function App() {
     let cancelled = false;
 
     (async () => {
-      await migrateLegacyBackendIfNeeded();
-      await initializeSettings();
-      if (!cancelled) setDataReady(true);
+      try {
+        await migrateLegacyBackendIfNeeded();
+        await initializeSettings();
+        if (!cancelled) setDataReady(true);
+      } catch (error) {
+        console.error('Failed to initialize local workspace', error);
+        if (!cancelled) {
+          setStartupError(error?.message || '本地工作台初始化失败');
+        }
+      }
     })();
 
     return () => {
@@ -196,10 +204,35 @@ function App() {
       <div className="app-shell flex min-h-screen w-full items-center justify-center px-5 text-white">
         <div className="glass-panel w-full max-w-sm p-5 text-center animate-bubble">
           <div className="panel-kicker">Local Workspace</div>
-          <div className="mt-2 text-base font-semibold text-white/88">正在打开本地工作台</div>
-          <div className="mt-2 text-xs leading-5 text-white/42">
-            正在准备 IndexedDB、本地持久化存储和旧数据迁移。
-          </div>
+          {startupError ? (
+            <>
+              <div className="mt-3 flex items-center justify-center gap-2 text-base font-semibold text-[#ffd0d0]">
+                <FaExclamationTriangle size={14} />
+                本地数据库暂时打不开
+              </div>
+              <div className="mt-3 rounded-2xl border border-[#ff8d8d]/18 bg-[#ff8d8d]/10 px-3 py-3 text-xs leading-5 text-white/62">
+                {startupError}
+              </div>
+              <div className="mt-3 text-xs leading-5 text-white/42">
+                通常是旧标签页或旧 PWA 窗口还占着数据库。先关闭其他本页面窗口，再刷新当前页面。
+              </div>
+              <button
+                type="button"
+                onClick={() => window.location.reload()}
+                className="glass-control mt-4 inline-flex h-10 items-center justify-center gap-2 px-4 text-sm font-semibold text-white/72 hover:text-white"
+              >
+                <FaRedo size={12} />
+                刷新重试
+              </button>
+            </>
+          ) : (
+            <>
+              <div className="mt-2 text-base font-semibold text-white/88">正在打开本地工作台</div>
+              <div className="mt-2 text-xs leading-5 text-white/42">
+                正在准备 IndexedDB、本地持久化存储和旧数据迁移。
+              </div>
+            </>
+          )}
         </div>
       </div>
     );

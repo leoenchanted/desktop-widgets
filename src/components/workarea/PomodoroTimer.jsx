@@ -55,7 +55,7 @@ const PomodoroTimer = ({ todayKey }) => {
   const progress = totalSeconds > 0 ? 1 - remainingSeconds / totalSeconds : 0;
 
   return (
-    <GlassPanel className={`flex h-full min-h-[250px] flex-col overflow-hidden ${isRunning ? 'pomodoro-running' : ''}`}>
+    <GlassPanel className={`workspace-fixed-panel flex flex-col overflow-hidden ${isRunning ? 'pomodoro-running' : ''}`}>
       <PanelHeader eyebrow="Focus" title="番茄钟" icon={FaSeedling} />
 
       <div className="mt-3 grid grid-cols-[1fr_auto] items-center gap-2">

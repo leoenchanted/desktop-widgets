@@ -222,7 +222,14 @@ IndexedDB stores：
 - `daily_reviews`：每日回顾，按日期保存当天汇总和手写备注。
 - `pomodoro_sessions`：番茄钟完成记录，按 `date` 建索引。
 - `assets`：本地图片/壁纸 Blob，按 `type` 建索引。
+- `pinned_notes`：工作区置顶记录，主记录 id 为 `main`，长期保留，不按日期切换。
 - `backup_snapshots`：自动备份内部快照，不进入普通完整 JSON 导出，用户可以从备份面板里恢复。
+
+IndexedDB 升级规则：
+
+- 每次新增 object store 都必须提高 `src/data/localDb.js` 的 `DB_VERSION`。
+- `openDb` 必须处理 `onblocked`、打开超时和 `onversionchange`，避免用户开着旧标签页/PWA 时一直卡在“正在打开本地工作台”。
+- App 启动初始化必须捕获 IndexedDB 打开失败并给用户显示可操作提示，不要让加载页无限等待。
 
 `localStorage` 只作为旧数据迁移来源：
 
@@ -249,6 +256,16 @@ new Date().toISOString().slice(0, 10)
 - 页面保持打开跨过本地 0 点时，必须用 `src/hooks/useTodayKey.js` 触发日期更新，不要只在组件初次加载时读取一次 `today()`。
 - Todo、番茄钟今日统计和今日回顾都应该响应 `todayKey` 变化自动刷新到新一天。
 - 今日回顾保留手动刷新按钮，同时可以根据 Todo、番茄钟和 Markdown 字数变化做轻量自动刷新。
+
+工作区布局规则：
+
+- 桌面端三列工作区必须有稳定高度，左右栏不能因为 Todo 或其他列表内容变多而撑高整行。
+- 工作区板块高度由 `workspace-grid`、`workspace-stack` 的比例轨道分配，不允许由内部文字或列表内容反向撑高。
+- 侧栏板块统一使用 `workspace-fixed-panel`，高度必须等于父级轨道高度，内部内容自己滚动或收缩。
+- TodoList 的任务列表必须在卡片内部滚动；任务很多时不能撑高右侧栏，也不能带着中间 Markdown 编辑器一起变高。TodoList 外层必须像 MarkdownEditor 一样使用 `overflow-hidden`，不能为了日期弹层改回 `overflow-visible`。
+- TodoList 的任务列表层必须脱离普通文档流：外层 `todo-list-panel` 相对定位，头部 `todo-list-header` 固定高度，任务滚动层 `todo-list-scroll` 绝对定位到底部，防止任务项参与卡片高度计算。
+- Todo 日期选择器需要保留可见弹层；日期弹层应通过 portal/fixed 浮在 body 上，不要依赖卡片外层 `overflow-visible`。
+- 窄屏和移动端不能只靠 grid 行高继承；`workspace-fixed-panel` 自身也必须设置固定高度和 `max-height`，防止内容反推卡片高度。
 
 ## Markdown 规则
 
@@ -321,7 +338,7 @@ desktop-widgets-backup-YYYY-MM-DD.json
 
 ```json
 {
-  "version": 3,
+  "version": 4,
   "app": "desktop-widgets",
   "storage": "indexeddb",
   "exportedAt": "2026-05-19T00:00:00.000Z",
@@ -332,12 +349,27 @@ desktop-widgets-backup-YYYY-MM-DD.json
     "markdown_entries": [],
     "daily_reviews": [],
     "pomodoro_sessions": [],
-    "assets": []
+    "assets": [],
+    "pinned_notes": []
   }
 }
 ```
 
 `assets` 导出时会把 Blob 转成 `dataUrl`，导入时再转回 Blob 存进 IndexedDB。修改备份格式时必须提高 `version`，并在导入逻辑里兼容旧格式。
+
+当前备份版本为 v4，新增 `pinned_notes`。旧备份没有该字段时按空数组处理。
+
+## 置顶记录规则
+
+置顶记录组件在 `src/components/workarea/PinnedNote.jsx`，数据 API 在 `src/api/pinnedNoteApi.js`：
+
+- 置顶记录是长期文本板，不按日期变化，不跨天清空。
+- 第一版只做一个普通文本区域，不加标题、标签、Markdown 或复杂笔记结构。
+- 内容自动保存到 IndexedDB `pinned_notes`，主键固定为 `main`。
+- UI 必须保留复制全文、清空和撤回清空，避免误删后无法恢复。
+- 内容很多时必须在组件内部滚动，不能撑高工作区侧栏。
+- 可以提示“仅保存在当前浏览器本地，公共电脑不要保存敏感密码”，但当前不做加密。
+- 完整 JSON 导出、导入和自动快照都必须包含 `pinned_notes`。
 
 Markdown 备份兼容规则：
 

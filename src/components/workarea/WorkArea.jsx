@@ -4,7 +4,7 @@ import TodoList from './TodoList';
 import MarkdownEditor from './MarkdownEditor';
 import PomodoroTimer from './PomodoroTimer';
 import DailyReview from './DailyReview';
-import PlaceholderSlot from './PlaceholderSlot';
+import PinnedNote from './PinnedNote';
 import GlassPanel from '../ui/GlassPanel';
 import StatusPill from '../ui/StatusPill';
 import { useTodayKey } from '../../hooks/useTodayKey';
@@ -52,7 +52,7 @@ const WorkArea = () => {
 
         <aside className="workspace-stack">
           <TodoList todayKey={date} />
-          <PlaceholderSlot title="灵感暂存" description="待扩展" />
+          <PinnedNote />
         </aside>
       </div>
     </div>

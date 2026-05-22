@@ -3,7 +3,7 @@ import { normalizeWidgetLayout } from '../config/widgetRegistry';
 import { LEGACY_WORKSPACE_KEY, countMarkdownWords, inferMarkdownEntryDate } from './markdownApi';
 import { blobToDataUrl, dataUrlToBlob } from '../utils/imageCompression';
 
-const BACKUP_VERSION = 3;
+const BACKUP_VERSION = 4;
 
 async function serializeAssets(assets = []) {
   return Promise.all(
@@ -101,6 +101,7 @@ function countsFor(data) {
     reviews: data.daily_reviews?.length || 0,
     pomodoro: data.pomodoro_sessions?.length || 0,
     assets: data.assets?.length || 0,
+    pinned: data.pinned_notes?.length || 0,
   };
 }
 
@@ -136,6 +137,7 @@ export const backupApi = {
       daily_reviews: data.daily_reviews || [],
       pomodoro_sessions: data.pomodoro_sessions || [],
       assets: hydrateAssets(data.assets || []),
+      pinned_notes: data.pinned_notes || [],
     };
     await importAllStores(hydrated);
     if (directoryHandle) {

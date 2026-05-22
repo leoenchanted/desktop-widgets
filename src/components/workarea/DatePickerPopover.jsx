@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 import { formatDate, localDateKey, today } from '../../utils/date';
 
@@ -8,17 +9,54 @@ const DatePickerPopover = ({ currentDate, onDateChange, datesWithData = [] }) =>
   const [isOpen, setIsOpen] = useState(false);
   const [viewMonth, setViewMonth] = useState(() => currentDate.slice(0, 7));
   const ref = useRef(null);
+  const buttonRef = useRef(null);
+  const popoverRef = useRef(null);
+  const [popoverStyle, setPopoverStyle] = useState(null);
+
+  const updatePopoverPosition = () => {
+    const button = buttonRef.current;
+    if (!button) return;
+    const rect = button.getBoundingClientRect();
+    setPopoverStyle({
+      position: 'fixed',
+      top: `${Math.min(rect.bottom + 8, window.innerHeight - 16)}px`,
+      right: `${Math.max(16, window.innerWidth - rect.right)}px`,
+      width: 'min(18rem, calc(100vw - 2rem))',
+    });
+  };
 
   useEffect(() => {
     const handler = (e) => {
-      if (ref.current && !ref.current.contains(e.target)) setIsOpen(false);
+      if (
+        ref.current
+        && !ref.current.contains(e.target)
+        && popoverRef.current
+        && !popoverRef.current.contains(e.target)
+      ) {
+        setIsOpen(false);
+      }
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    updatePopoverPosition();
+
+    const handler = () => updatePopoverPosition();
+    window.addEventListener('resize', handler);
+    window.addEventListener('scroll', handler, true);
+
+    return () => {
+      window.removeEventListener('resize', handler);
+      window.removeEventListener('scroll', handler, true);
+    };
+  }, [isOpen]);
+
   const openPopover = () => {
     setViewMonth(currentDate.slice(0, 7));
+    requestAnimationFrame(updatePopoverPosition);
     setIsOpen(true);
   };
 
@@ -37,6 +75,7 @@ const DatePickerPopover = ({ currentDate, onDateChange, datesWithData = [] }) =>
   return (
     <div ref={ref} className="relative">
       <button
+        ref={buttonRef}
         onClick={openPopover}
         className="glass-control flex w-full items-center justify-between gap-3 px-3 py-2 text-left"
       >
@@ -46,10 +85,11 @@ const DatePickerPopover = ({ currentDate, onDateChange, datesWithData = [] }) =>
         </svg>
       </button>
 
-      {isOpen && (
+      {isOpen && createPortal(
         <div
-          className="absolute right-0 top-full z-[120] mt-2 max-h-[70vh] origin-top-right overflow-y-auto rounded-2xl border border-white/16 bg-[#101820]/96 p-3 shadow-2xl backdrop-blur-2xl glass-scrollbar animate-bubble"
-          style={{ width: 'min(18rem, calc(100vw - 2rem))' }}
+          ref={popoverRef}
+          className="z-[10020] max-h-[70vh] origin-top-right overflow-y-auto rounded-2xl border border-white/16 bg-[#101820]/96 p-3 shadow-2xl backdrop-blur-2xl glass-scrollbar animate-bubble"
+          style={popoverStyle || { position: 'fixed', top: '1rem', right: '1rem', width: 'min(18rem, calc(100vw - 2rem))' }}
         >
           <div className="mb-3 flex items-center justify-between">
             <button
@@ -117,7 +157,8 @@ const DatePickerPopover = ({ currentDate, onDateChange, datesWithData = [] }) =>
                 );
               })}
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );

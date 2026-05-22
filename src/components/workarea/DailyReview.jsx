@@ -99,7 +99,7 @@ const DailyReview = ({ todayKey }) => {
     : 0;
 
   return (
-    <GlassPanel className="flex h-full min-h-[260px] flex-col overflow-hidden">
+    <GlassPanel className="workspace-fixed-panel flex flex-col overflow-hidden">
       <PanelHeader
         eyebrow="Review"
         title="今日回顾"
@@ -129,16 +129,18 @@ const DailyReview = ({ todayKey }) => {
             <Metric value={review?.pomodoro_count || 0} label="番茄钟" tone="text-[#80bfff]" />
           </div>
 
-          <textarea
-            value={notes}
-            onChange={(e) => {
-              editedRef.current = true;
-              setNotes(e.target.value);
-            }}
-            placeholder="今日复盘..."
-            className="mt-4 min-h-[72px] flex-1 resize-none rounded-2xl border border-white/10 bg-white/[0.055] p-3 text-sm leading-6 text-white/68 outline-none placeholder-white/24 transition-all focus:border-[#80bfff]/35 focus:bg-white/9"
-            rows={3}
-          />
+          <div className="mt-4 min-h-0 flex-1">
+            <textarea
+              value={notes}
+              onChange={(e) => {
+                editedRef.current = true;
+                setNotes(e.target.value);
+              }}
+              placeholder="今日复盘..."
+              className="h-full min-h-[72px] w-full resize-none rounded-2xl border border-white/10 bg-white/[0.055] p-3 text-sm leading-6 text-white/68 outline-none placeholder-white/24 transition-all focus:border-[#80bfff]/35 focus:bg-white/9"
+              rows={3}
+            />
+          </div>
         </>
       )}
     </GlassPanel>

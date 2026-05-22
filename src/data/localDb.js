@@ -1,7 +1,17 @@
 const DB_NAME = 'desktop-widgets-local';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
+const DB_OPEN_TIMEOUT_MS = 10000;
 
-const DATA_STORES = ['settings', 'widgets', 'todos', 'markdown_entries', 'daily_reviews', 'pomodoro_sessions', 'assets'];
+const DATA_STORES = [
+  'settings',
+  'widgets',
+  'todos',
+  'markdown_entries',
+  'daily_reviews',
+  'pomodoro_sessions',
+  'assets',
+  'pinned_notes',
+];
 
 let dbPromise;
 
@@ -9,7 +19,21 @@ function openDb() {
   if (dbPromise) return dbPromise;
 
   dbPromise = new Promise((resolve, reject) => {
+    let settled = false;
     const request = indexedDB.open(DB_NAME, DB_VERSION);
+    const timer = window.setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      dbPromise = null;
+      reject(new Error('本地数据库打开超时。请关闭其他正在打开的本页面或 PWA 窗口后刷新。'));
+    }, DB_OPEN_TIMEOUT_MS);
+
+    const finish = (callback, value) => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timer);
+      callback(value);
+    };
 
     request.onupgradeneeded = () => {
       const db = request.result;
@@ -42,10 +66,31 @@ function openDb() {
         const store = db.createObjectStore('backup_snapshots', { keyPath: 'id' });
         store.createIndex('created_at', 'created_at', { unique: false });
       }
+      if (!db.objectStoreNames.contains('pinned_notes')) {
+        db.createObjectStore('pinned_notes', { keyPath: 'id' });
+      }
     };
 
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
+    request.onsuccess = () => {
+      const db = request.result;
+      if (settled) {
+        db.close();
+        return;
+      }
+      db.onversionchange = () => {
+        db.close();
+        dbPromise = null;
+      };
+      finish(resolve, db);
+    };
+    request.onerror = () => {
+      dbPromise = null;
+      finish(reject, request.error || new Error('本地数据库打开失败'));
+    };
+    request.onblocked = () => {
+      dbPromise = null;
+      finish(reject, new Error('本地数据库升级被其他页面占用。请关闭其他标签页或旧 PWA 窗口后刷新。'));
+    };
   });
 
   return dbPromise;

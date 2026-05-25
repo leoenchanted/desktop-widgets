@@ -1,15 +1,16 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { FaBookmark, FaCheck, FaDownload, FaEye, FaPenNib, FaTrashAlt, FaUndo } from 'react-icons/fa';
+import { FaBookmark, FaCheck, FaDownload, FaPenNib, FaTrashAlt, FaUndo } from 'react-icons/fa';
 import { useMarkdownStore } from '../../store/useMarkdownStore';
 import { useDebounce } from '../../hooks/useDebounce';
-import MarkdownPreview from './MarkdownPreview';
 import DatePickerPopover from './DatePickerPopover';
 import StatsBar from './StatsBar';
+import TabBar from './TabBar';
 import GlassPanel from '../ui/GlassPanel';
 import IconButton from '../ui/IconButton';
 import PanelHeader from '../ui/PanelHeader';
 import SegmentedControl from '../ui/SegmentedControl';
 import StatusPill from '../ui/StatusPill';
+import VditorWrapper from './VditorWrapper';
 
 const MarkdownEditor = ({ todayKey }) => {
   const {
@@ -18,15 +19,21 @@ const MarkdownEditor = ({ todayKey }) => {
     charCount,
     loading,
     datesWithData,
+    pages,
+    activePageId,
     setContent,
     saveContent,
     fetchContent,
     fetchDates,
     setCurrentDate,
     currentDate,
+    addPage,
+    removePage,
+    switchPage,
+    renamePage,
   } = useMarkdownStore();
   const debouncedContent = useDebounce(content, 500);
-  const [mode, setMode] = useState('edit');
+  const [editorMode, setEditorMode] = useState('plain');
   const [saveState, setSaveState] = useState('idle');
   const [clearedDraft, setClearedDraft] = useState(null);
   const textareaRef = useRef(null);
@@ -86,7 +93,7 @@ const MarkdownEditor = ({ todayKey }) => {
     setSaveState('saving');
     try {
       if (hasEditedRef.current) await saveContent();
-      const blob = new Blob(['\ufeff', content], { type: 'text/plain;charset=utf-8' });
+      const blob = new Blob(['﻿', content], { type: 'text/plain;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -113,21 +120,21 @@ const MarkdownEditor = ({ todayKey }) => {
 
   const handleClear = async () => {
     if (!content || loading) return;
-    setClearedDraft({ content, date: currentDate });
+    setClearedDraft({ content, date: currentDate, pageId: activePageId });
     hasEditedRef.current = true;
     setContent('');
     await persistAfterProgrammaticChange();
   };
 
   const handleUndoClear = async () => {
-    if (!clearedDraft || clearedDraft.date !== currentDate || loading) return;
+    if (!clearedDraft || clearedDraft.date !== currentDate || clearedDraft.pageId !== activePageId || loading) return;
     hasEditedRef.current = true;
     setContent(clearedDraft.content);
     setClearedDraft(null);
     await persistAfterProgrammaticChange();
   };
 
-  const handleKeyDown = (e) => {
+  const handleTextareaKeyDown = (e) => {
     if (e.key === 'Tab') {
       e.preventDefault();
       const ta = textareaRef.current;
@@ -177,7 +184,7 @@ const MarkdownEditor = ({ todayKey }) => {
               <IconButton
                 icon={FaUndo}
                 onClick={handleUndoClear}
-                disabled={loading || !clearedDraft || clearedDraft.date !== currentDate}
+                disabled={loading || !clearedDraft || clearedDraft.date !== currentDate || clearedDraft.pageId !== activePageId}
                 title="撤回清空"
                 className="draft-toolbar-button h-9 w-9 text-white/50 hover:text-[#bdf6d3] disabled:opacity-35"
               />
@@ -189,11 +196,11 @@ const MarkdownEditor = ({ todayKey }) => {
                 {status}
               </StatusPill>
               <SegmentedControl
-                value={mode}
-                onChange={setMode}
+                value={editorMode}
+                onChange={setEditorMode}
                 options={[
-                  { value: 'edit', label: '编辑' },
-                  { value: 'preview', label: '预览' },
+                  { value: 'plain', label: '纯文本' },
+                  { value: 'markdown', label: 'Markdown' },
                 ]}
               />
             </div>
@@ -209,6 +216,15 @@ const MarkdownEditor = ({ todayKey }) => {
         />
       </div>
 
+      <TabBar
+        pages={pages}
+        activePageId={activePageId}
+        onSwitch={switchPage}
+        onAdd={addPage}
+        onRemove={removePage}
+        onRename={renamePage}
+      />
+
       <div className="soft-divider" />
 
       <div className="relative min-h-0 flex-1 overflow-hidden">
@@ -216,26 +232,19 @@ const MarkdownEditor = ({ todayKey }) => {
           <div className="flex h-full items-center justify-center text-sm text-white/35">
             加载中...
           </div>
-        ) : mode === 'preview' ? (
-          <div className="h-full min-h-0 overflow-y-auto p-4 glass-scrollbar md:p-6">
-            {content ? (
-              <div className="markdown-paper min-h-full p-5 md:p-7">
-                <MarkdownPreview content={content} />
-              </div>
-            ) : (
-              <div className="flex h-full flex-col items-center justify-center text-white/30">
-                <FaEye className="mb-3" size={18} />
-                <span className="text-sm">没有可预览内容</span>
-              </div>
-            )}
-          </div>
+        ) : editorMode === 'markdown' ? (
+          <VditorWrapper
+            content={content}
+            onContentChange={handleChange}
+            className="h-full w-full"
+          />
         ) : (
           <textarea
             ref={textareaRef}
             value={content}
             onChange={(e) => handleChange(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="写下你的记录、计划或复盘..."
+            onKeyDown={handleTextareaKeyDown}
+            placeholder="写下你的记录..."
             className="h-full w-full resize-none bg-transparent p-5 text-[15px] leading-8 text-white/86 outline-none placeholder-white/26 selection:bg-[#80bfff]/30 md:p-6 md:text-base"
             spellCheck={false}
           />

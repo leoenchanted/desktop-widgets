@@ -9,10 +9,13 @@ import {
   FaPlay,
   FaRedo,
   FaSave,
+  FaTrashAlt,
 } from 'react-icons/fa';
 import {
   AUTO_BACKUP_INTERVAL_OPTIONS,
+  AUTO_BACKUP_FILE_INTERVAL_OPTIONS,
   chooseBackupDirectory,
+  clearAllSnapshots,
   createFileBackup,
   formatBackupTime,
   getAutoBackupSettings,
@@ -162,6 +165,23 @@ const AutoBackupSettings = () => {
     }
   };
 
+  const handleClearAllSnapshots = async () => {
+    const ok = window.confirm('确定清空所有自动快照？此操作不可撤销。');
+    if (!ok) return;
+
+    setBusy(true);
+    setStatus('正在清空快照...');
+    try {
+      await clearAllSnapshots();
+      await refresh();
+      setStatus('已清空所有自动快照。');
+    } catch (error) {
+      setStatus(error.message || '清空快照失败');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   if (!settings) {
     return (
       <div className="rounded-2xl border border-white/10 bg-white/[0.055] p-4 text-sm text-white/45">
@@ -238,6 +258,34 @@ const AutoBackupSettings = () => {
         />
       </SettingRow>
 
+      {settings.hasDirectoryHandle && settings.directoryName && (
+        <div className="flex items-center gap-2 rounded-2xl border border-[#9cc9ff]/12 bg-[#9cc9ff]/8 px-4 py-3 text-xs font-medium text-white/58">
+          <FaFolderOpen size={11} className="flex-shrink-0 text-[#9cc9ff]/60" />
+          当前备份文件夹：<span className="font-semibold text-white/76">{settings.directoryName}</span>
+        </div>
+      )}
+
+      {settings.fileBackupEnabled && settings.hasDirectoryHandle && (
+        <SettingRow
+          icon={FaClock}
+          title="文件夹备份频率"
+          description="独立于自动快照的频率。到时间时会自动生成完整 JSON 写入所选文件夹。"
+        >
+          <select
+            value={settings.fileBackupIntervalMinutes}
+            disabled={busy || !settings.fileBackupEnabled}
+            onChange={(event) => updateSetting('autoBackupFileIntervalMinutes', Number(event.target.value))}
+            className="glass-control h-9 bg-transparent px-3 text-xs font-semibold text-white/72 outline-none disabled:opacity-45"
+          >
+            {AUTO_BACKUP_FILE_INTERVAL_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value} className="bg-[#10151d] text-white">
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </SettingRow>
+      )}
+
       <div className="grid gap-2 sm:grid-cols-2">
         <button
           type="button"
@@ -292,6 +340,15 @@ const AutoBackupSettings = () => {
           >
             <FaPlay size={10} />
             立即快照
+          </button>
+          <button
+            type="button"
+            onClick={handleClearAllSnapshots}
+            disabled={busy || snapshots.length === 0}
+            className="glass-control flex h-10 flex-shrink-0 items-center justify-center gap-2 px-3 text-xs font-semibold text-[#ffb3b3]/60 hover:text-[#ffb3b3] disabled:opacity-45"
+          >
+            <FaTrashAlt size={10} />
+            清空快照
           </button>
         </div>
 

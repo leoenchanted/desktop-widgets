@@ -1,5 +1,16 @@
 export const CHANGELOG = [
   {
+    date: '2026-05-25',
+    title: '编辑器重构：Vditor WYSIWYG 替代 contentEditable',
+    summary: 'Markdown 编辑器重写为 Vditor 所见即所得引擎，彻底解决实时渲染问题。',
+    items: [
+      '移除 turndown + contentEditable 手动渲染管线，改用 Vditor WYSIWYG 模式。',
+      'Markdown 模式下输入 markdown 语法自动实时渲染（Typora 风格），不再需要手动光标恢复。',
+      'Vditor 输入回调直接返回纯 markdown 文本，数据存储和导出格式不变。',
+      '置顶记录展开弹窗与卡片视图共享同一状态，修改即时同步。',
+    ],
+  },
+  {
     date: '2026-05-22',
     title: 'Todo 卡片高度修正',
     summary: '工作区板块改为固定比例高度，修复任务很多时 TodoList 撑高布局的问题。',
@@ -246,6 +257,42 @@ export const CHANGELOG = [
     items: [
       '日期弹层改为卡片内可见，并限制最大高度。',
       '工作区在窄屏下改成单列堆叠，减少遮挡和文字挤压。',
+    ],
+  },
+  {
+    date: '2026-05-25',
+    title: '置顶记录展开弹窗居中修复',
+    summary: '修复置顶记录展开弹窗在 Layout transform 容器中被推到左侧无法居中的问题。',
+    items: [
+      '根因：Layout 组件的 transform: translateX 创建了新的 CSS containing block，导致 position: fixed 不再以 viewport 为基准。',
+      '修复：使用 createPortal 将展开弹窗渲染到 document.body，脱离 transform 祖先链影响。',
+    ],
+  },
+  {
+    date: '2026-05-25',
+    title: '编辑器分页功能（Browser Tab 风格）',
+    summary: 'Markdown 编辑器现在支持创建多个独立页面，像浏览器标签页一样切换和管理。',
+    items: [
+      '在记录中扩展 pages 数组字段，每个日期可创建多个独立页面，各自保存内容。',
+      '新增 TabBar 标签栏组件，支持点击切换、双击重命名、点击 × 关闭页面。',
+      '新建页面自动编号（页面 1、页面 2...），用户可双击标签自定义名称。',
+      '清空/撤回功能绑定到当前页面，切换页面后撤回只对当前页生效。',
+      'TXT 导出只导出当前活跃页内容，和原有行为一致。',
+      '旧数据自动兼容：加载旧单页记录时自动包装为 pages 数组，无损迁移。',
+      '标签栏位置在日期选择器下方，轻量紧凑风格，与整体 UI 统一。',
+    ],
+  },
+  {
+    date: '2026-05-25',
+    title: '备份功能增强',
+    summary: '文件夹备份支持独立频率、显示文件夹名称、新增一键清空快照。',
+    items: [
+      '电脑文件夹备份改为独立频率控制，不再依附于自动快照。即使快照未到时间，文件夹备份到点了也会单独执行。',
+      '备份设置中新增文件夹备份频率选择器，支持 30 分钟 / 1 小时 / 6 小时。',
+      '选择备份文件夹后，UI 会显示当前备份文件夹名称，方便用户确认备份位置。',
+      '自动快照列表新增"清空快照"按钮，支持一键清空所有内部快照。',
+      '新增 autoBackupDirectoryName 设置项，用于持久化文件夹名称显示。',
+      '备份导入导出过滤 autoBackupDirectoryName，与目录句柄一致不进入 JSON。',
     ],
   },
 ];

@@ -1,0 +1,281 @@
+/* Vditor overrides for glass-panel dark aesthetic */
+
+/* Container fill */
+.vditor {
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+}
+
+.vditor--dark {
+  background: transparent !important;
+  border-color: transparent !important;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.vditor--dark .vditor-content {
+  flex: 1;
+  min-height: 0;
+  background: transparent;
+}
+
+/* Hide toolbar entirely — clean UI */
+.vditor-toolbar {
+  display: none !important;
+}
+
+/* Editor content area — match plain text mode */
+.vditor-reset {
+  padding: 20px !important;
+  color: rgba(255, 255, 255, 0.86) !important;
+  font-size: 15px;
+  line-height: 2rem;
+  overflow-wrap: anywhere;
+  background: transparent !important;
+  font-family:
+    "SF Pro Text", "SF Pro Display", "PingFang SC", "Hiragino Sans GB",
+    "Microsoft YaHei UI", "Segoe UI Variable", "Segoe UI", system-ui,
+    sans-serif !important;
+}
+
+@media (min-width: 768px) {
+  .vditor-reset {
+    padding: 24px !important;
+    font-size: 16px;
+  }
+}
+
+.vditor-reset:focus {
+  outline: none;
+}
+
+.vditor-reset > *:first-child {
+  margin-top: 0;
+}
+
+.vditor-reset > *:last-child {
+  margin-bottom: 0;
+}
+
+/* Headings — no underlines, clean look */
+.vditor-reset h1,
+.vditor-reset h2,
+.vditor-reset h3,
+.vditor-reset h4,
+.vditor-reset h5,
+.vditor-reset h6 {
+  color: rgba(255, 255, 255, 0.96);
+  font-weight: 720;
+  letter-spacing: 0;
+  line-height: 1.22;
+  border-bottom: none !important;
+  text-decoration: none !important;
+}
+
+.vditor-reset h1 {
+  font-size: 1.9rem;
+  margin: 0 0 1rem;
+}
+
+.vditor-reset h2 {
+  font-size: 1.45rem;
+  margin: 1.8rem 0 0.8rem;
+}
+
+.vditor-reset h3 {
+  font-size: 1.15rem;
+  margin: 1.45rem 0 0.55rem;
+}
+
+.vditor-reset h4,
+.vditor-reset h5,
+.vditor-reset h6 {
+  font-size: 1rem;
+  margin: 1.15rem 0 0.45rem;
+}
+
+.vditor-reset p {
+  margin: 0.7rem 0;
+  color: rgba(255, 255, 255, 0.86);
+}
+
+/* Links */
+.vditor-reset a {
+  color: #b7dcff;
+  font-weight: 600;
+  text-decoration: none;
+  border-bottom: none;
+}
+
+.vditor-reset a:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Bold / Italic */
+.vditor-reset strong {
+  color: #fff;
+  font-weight: 750;
+}
+
+.vditor-reset em {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+/* Lists */
+.vditor-reset ul,
+.vditor-reset ol {
+  margin: 0.7rem 0;
+  padding-left: 1.45rem;
+}
+
+.vditor-reset li {
+  margin: 0.3rem 0;
+  padding-left: 0.2rem;
+  color: rgba(255, 255, 255, 0.86);
+}
+
+.vditor-reset li::marker {
+  color: rgba(183, 220, 255, 0.82);
+  font-weight: 700;
+}
+
+.vditor-reset li > p {
+  margin: 0.25rem 0;
+}
+
+/* Task list */
+.vditor-reset .vditor-task input {
+  accent-color: #7ee7ad;
+  height: 0.95rem;
+  width: 0.95rem;
+  margin-top: 0.38rem;
+}
+
+/* Inline code */
+.vditor-reset code:not([class]) {
+  background: rgba(183, 220, 255, 0.12);
+  border: 1px solid rgba(183, 220, 255, 0.13);
+  border-radius: 0.45rem;
+  color: #d8ebff;
+  font-family: "SF Mono", "Cascadia Code", Consolas, monospace;
+  font-size: 0.88em;
+  padding: 0.12rem 0.38rem;
+}
+
+/* Code block */
+.vditor-reset pre {
+  background: rgba(6, 10, 16, 0.58);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 1rem;
+  margin: 1rem 0;
+  overflow-x: auto;
+  padding: 1rem;
+}
+
+.vditor-reset pre code {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.84);
+  display: block;
+  line-height: 1.65;
+  padding: 0;
+  white-space: pre;
+  font-size: 0.88em;
+}
+
+/* Blockquote */
+.vditor-reset blockquote {
+  background: rgba(128, 191, 255, 0.08);
+  border-left: 3px solid #b7dcff;
+  border-radius: 0 1rem 1rem 0;
+  color: rgba(255, 255, 255, 0.68);
+  margin: 1rem 0;
+  padding: 0.8rem 1rem;
+}
+
+.vditor-reset blockquote p {
+  margin: 0.35rem 0;
+}
+
+/* Images */
+.vditor-reset img {
+  border-radius: 1rem;
+  display: block;
+  margin: 1rem 0;
+  max-width: 100%;
+}
+
+/* Horizontal rules */
+.vditor-reset hr {
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  border: none;
+  height: 1px;
+  margin: 1.6rem 0;
+}
+
+/* Tables */
+.vditor-reset table {
+  border-collapse: collapse;
+  display: block;
+  margin: 1rem 0;
+  max-width: 100%;
+  overflow-x: auto;
+  width: max-content;
+}
+
+.vditor-reset th,
+.vditor-reset td {
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  font-size: 0.9rem;
+  padding: 0.55rem 0.75rem;
+  text-align: left;
+}
+
+.vditor-reset th {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.92);
+  font-weight: 700;
+}
+
+.vditor-reset tr:nth-child(even) td {
+  background: rgba(255, 255, 255, 0.035);
+}
+
+/* Hide counter (we have our own) */
+.vditor-counter {
+  display: none !important;
+}
+
+/* Hide heading block markers (H1, H2 etc.) in WYSIWYG mode */
+.vditor-wysiwyg > .vditor-reset > h1:before,
+.vditor-wysiwyg > .vditor-reset > h2:before,
+.vditor-wysiwyg > .vditor-reset > h3:before,
+.vditor-wysiwyg > .vditor-reset > h4:before,
+.vditor-wysiwyg > .vditor-reset > h5:before,
+.vditor-wysiwyg > .vditor-reset > h6:before,
+.vditor-wysiwyg div.vditor-wysiwyg__block:before {
+  display: none !important;
+}
+
+/* Hide all WYSIWYG block markers */
+.vditor-wysiwyg__marker {
+  display: none !important;
+}
+
+/* Hide Vditor gutter/panel/outline */
+.vditor-outline {
+  display: none !important;
+}
+
+.vditor--dark .vditor-ir,
+.vditor--dark .vditor-wysiwyg {
+  background: transparent;
+}

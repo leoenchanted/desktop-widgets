@@ -23,10 +23,14 @@ export function inferMarkdownEntryDate(entry) {
 
 function normalizeEntry(entry, date) {
   const timestamp = now();
+
   if (!entry) {
+    const defaultPage = { id: uuidv4(), title: '页面 1', content: '', created_at: timestamp, updated_at: timestamp };
     return {
       id: uuidv4(),
       date,
+      pages: [defaultPage],
+      activePageId: defaultPage.id,
       content: '',
       word_count: 0,
       char_count: 0,
@@ -35,10 +39,25 @@ function normalizeEntry(entry, date) {
     };
   }
 
-  const content = entry.content || '';
+  let pages = entry.pages;
+  if (!pages || !Array.isArray(pages) || pages.length === 0) {
+    const oldContent = entry.content || '';
+    const pageId = uuidv4();
+    pages = [{ id: pageId, title: '草稿', content: oldContent, created_at: entry.created_at || timestamp, updated_at: entry.updated_at || timestamp }];
+  }
+
+  const activePageId = entry.activePageId && pages.some((p) => p.id === entry.activePageId)
+    ? entry.activePageId
+    : pages[0].id;
+
+  const activePage = pages.find((p) => p.id === activePageId) || pages[0];
+  const content = activePage.content || '';
+
   return {
     ...entry,
     date,
+    pages,
+    activePageId,
     content,
     word_count: countMarkdownWords(content),
     char_count: content.length,
@@ -99,13 +118,21 @@ export const markdownApi = {
     return normalizeEntry(entry, key);
   },
 
-  save: async (date = today(), content = '') => {
+  save: async (date = today(), data = {}) => {
     const key = date || today();
     const existing = await getRecord('markdown_entries', key);
     const timestamp = now();
+
+    const pages = data.pages || [];
+    const activePageId = data.activePageId || pages[0]?.id || null;
+    const activePage = pages.find((p) => p.id === activePageId) || pages[0];
+    const content = activePage?.content || '';
+
     const entry = {
       id: existing?.id || uuidv4(),
       date: key,
+      pages,
+      activePageId,
       content,
       word_count: countMarkdownWords(content),
       char_count: content.length,
@@ -119,7 +146,7 @@ export const markdownApi = {
   getAllDates: async () => {
     const entries = await getDatedEntries();
     return entries
-      .filter((entry) => entry.content?.trim())
+      .filter((entry) => entry.pages?.some((p) => p.content?.trim()))
       .map((entry) => entry.date)
       .sort((a, b) => b.localeCompare(a));
   },

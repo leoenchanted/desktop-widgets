@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { FaCheck, FaClipboard, FaCopy, FaLock, FaThumbtack, FaTrashAlt, FaUndo } from 'react-icons/fa';
+import { createPortal } from 'react-dom';
+import { FaCheck, FaClipboard, FaCopy, FaExpandAlt, FaLock, FaThumbtack, FaTimes, FaTrashAlt, FaUndo } from 'react-icons/fa';
 import { pinnedNoteApi } from '../../api/pinnedNoteApi';
 import { useDebounce } from '../../hooks/useDebounce';
 import GlassPanel from '../ui/GlassPanel';
@@ -14,6 +15,7 @@ const PinnedNote = () => {
   const [saveState, setSaveState] = useState('idle');
   const [clearedContent, setClearedContent] = useState(null);
   const [copyState, setCopyState] = useState('');
+  const [expanded, setExpanded] = useState(false);
   const hasEditedRef = useRef(false);
   const debouncedContent = useDebounce(content, 500);
 
@@ -118,88 +120,185 @@ const PinnedNote = () => {
   };
 
   return (
-    <GlassPanel className="workspace-fixed-panel flex flex-col overflow-hidden" padded={false}>
-      <div className="px-4 pb-3 pt-4">
-        <PanelHeader
-          eyebrow="Pinned"
-          title="置顶记录"
-          icon={FaThumbtack}
-          meta="长期保留，不随日期切换。请不要在公共电脑保存敏感密码。"
-          action={
-            <div className="flex flex-wrap items-center justify-end gap-2">
-              <IconButton
-                icon={FaCopy}
-                onClick={handleCopy}
-                disabled={loading || !content.trim()}
-                title="复制全文"
-                className="draft-toolbar-button h-9 w-9 text-white/50 disabled:opacity-35"
-              />
-              <IconButton
-                icon={FaTrashAlt}
-                onClick={handleClear}
-                disabled={loading || !content}
-                title="清空置顶记录"
-                className="draft-toolbar-button h-9 w-9 text-white/50 hover:text-[#ffd0d0] disabled:opacity-35"
-              />
-              <IconButton
-                icon={FaUndo}
-                onClick={handleUndoClear}
-                disabled={loading || !clearedContent}
-                title="撤回清空"
-                className="draft-toolbar-button h-9 w-9 text-white/50 hover:text-[#bdf6d3] disabled:opacity-35"
-              />
-            </div>
-          }
-        />
-      </div>
-
-      <div className="soft-divider" />
-
-      <div className="min-h-0 flex-1">
-        {loading ? (
-          <div className="flex h-full items-center justify-center text-sm text-white/34">
-            加载中...
-          </div>
-        ) : (
-          <textarea
-            value={content}
-            onChange={(event) => handleChange(event.target.value)}
-            placeholder="把长期需要置顶的信息放在这里..."
-            className="h-full w-full resize-none bg-transparent px-4 py-4 text-sm leading-7 text-white/82 outline-none placeholder-white/24 selection:bg-[#80bfff]/30"
-            spellCheck={false}
+    <>
+      <GlassPanel className="workspace-fixed-panel flex flex-col overflow-hidden" padded={false}>
+        <div className="px-4 pb-3 pt-4">
+          <PanelHeader
+            eyebrow="Pinned"
+            title="置顶记录"
+            icon={FaThumbtack}
+            meta="长期保留，不随日期切换。请不要在公共电脑保存敏感密码。"
+            action={
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <IconButton
+                  icon={FaExpandAlt}
+                  onClick={() => setExpanded(true)}
+                  disabled={loading}
+                  title="展开编辑"
+                  className="draft-toolbar-button h-9 w-9 text-white/50 hover:text-white disabled:opacity-35"
+                />
+                <IconButton
+                  icon={FaCopy}
+                  onClick={handleCopy}
+                  disabled={loading || !content.trim()}
+                  title="复制全文"
+                  className="draft-toolbar-button h-9 w-9 text-white/50 disabled:opacity-35"
+                />
+                <IconButton
+                  icon={FaTrashAlt}
+                  onClick={handleClear}
+                  disabled={loading || !content}
+                  title="清空置顶记录"
+                  className="draft-toolbar-button h-9 w-9 text-white/50 hover:text-[#ffd0d0] disabled:opacity-35"
+                />
+                <IconButton
+                  icon={FaUndo}
+                  onClick={handleUndoClear}
+                  disabled={loading || !clearedContent}
+                  title="撤回清空"
+                  className="draft-toolbar-button h-9 w-9 text-white/50 hover:text-[#bdf6d3] disabled:opacity-35"
+                />
+              </div>
+            }
           />
-        )}
-      </div>
+        </div>
 
-      <div className="soft-divider" />
-      <div className="grid gap-2 px-4 py-3">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <StatusPill
-            variant={saveState === 'error' ? 'warning' : 'success'}
-            className="min-w-[4.75rem] justify-center"
-          >
-            {saveState === 'saved' && <FaCheck className="mr-1.5" size={10} />}
-            {status}
-          </StatusPill>
-          {copyState && (
-            <span className="flex items-center gap-1.5 text-[11px] font-semibold text-white/44">
-              <FaClipboard size={10} />
-              {copyState}
-            </span>
+        <div className="soft-divider" />
+
+        <div className="min-h-0 flex-1">
+          {loading ? (
+            <div className="flex h-full items-center justify-center text-sm text-white/34">
+              加载中...
+            </div>
+          ) : (
+            <textarea
+              value={content}
+              onChange={(event) => handleChange(event.target.value)}
+              placeholder="把长期需要置顶的信息放在这里..."
+              className="h-full w-full resize-none bg-transparent px-4 py-4 text-sm leading-7 text-white/82 outline-none placeholder-white/24 selection:bg-[#80bfff]/30"
+              spellCheck={false}
+            />
           )}
         </div>
-        <StatsBar
-          charCount={charCount}
-          wordCount={wordCount}
-          extra={(
-            <span className="flex items-center gap-1.5">
-              <FaLock size={9} />
-              本地保存
-            </span>
-          )}
-        />
-      </div>
-    </GlassPanel>
+
+        <div className="soft-divider" />
+        <div className="grid gap-2 px-4 py-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <StatusPill
+              variant={saveState === 'error' ? 'warning' : 'success'}
+              className="min-w-[4.75rem] justify-center"
+            >
+              {saveState === 'saved' && <FaCheck className="mr-1.5" size={10} />}
+              {status}
+            </StatusPill>
+            {copyState && (
+              <span className="flex items-center gap-1.5 text-[11px] font-semibold text-white/44">
+                <FaClipboard size={10} />
+                {copyState}
+              </span>
+            )}
+          </div>
+          <StatsBar
+            charCount={charCount}
+            wordCount={wordCount}
+            extra={(
+              <span className="flex items-center gap-1.5">
+                <FaLock size={9} />
+                本地保存
+              </span>
+            )}
+          />
+        </div>
+      </GlassPanel>
+
+      {expanded && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center px-4 py-6" onClick={() => setExpanded(false)}>
+          <div className="absolute inset-0 bg-black/44 backdrop-blur-sm" />
+          <div
+            className="glass-panel relative flex h-full w-full max-w-2xl flex-col overflow-hidden p-0 shadow-2xl animate-bubble"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-4 border-b border-white/10 px-5 py-5">
+              <PanelHeader
+                eyebrow="Pinned"
+                title="置顶记录"
+                icon={FaThumbtack}
+                action={
+                  <div className="flex flex-wrap items-center justify-end gap-2">
+                    <IconButton
+                      icon={FaCopy}
+                      onClick={handleCopy}
+                      disabled={!content.trim()}
+                      title="复制全文"
+                      className="draft-toolbar-button h-9 w-9 text-white/50 disabled:opacity-35"
+                    />
+                    <IconButton
+                      icon={FaTrashAlt}
+                      onClick={() => { handleClear(); }}
+                      disabled={!content}
+                      title="清空置顶记录"
+                      className="draft-toolbar-button h-9 w-9 text-white/50 hover:text-[#ffd0d0] disabled:opacity-35"
+                    />
+                    <IconButton
+                      icon={FaUndo}
+                      onClick={handleUndoClear}
+                      disabled={!clearedContent}
+                      title="撤回清空"
+                      className="draft-toolbar-button h-9 w-9 text-white/50 hover:text-[#bdf6d3] disabled:opacity-35"
+                    />
+                    <IconButton
+                      icon={FaTimes}
+                      onClick={() => setExpanded(false)}
+                      title="关闭"
+                      className="draft-toolbar-button h-9 w-9 text-white/50 hover:text-white"
+                    />
+                  </div>
+                }
+              />
+            </div>
+
+            <div className="min-h-0 flex-1">
+              <textarea
+                value={content}
+                onChange={(e) => handleChange(e.target.value)}
+                placeholder="把长期需要置顶的信息放在这里..."
+                className="h-full w-full resize-none bg-transparent p-5 text-[15px] leading-8 text-white/86 outline-none placeholder-white/24 selection:bg-[#80bfff]/30 md:p-6"
+                spellCheck={false}
+              />
+            </div>
+
+            <div className="soft-divider" />
+            <div className="grid gap-2 px-5 py-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <StatusPill
+                  variant={saveState === 'error' ? 'warning' : 'success'}
+                  className="min-w-[4.75rem] justify-center"
+                >
+                  {saveState === 'saved' && <FaCheck className="mr-1.5" size={10} />}
+                  {status}
+                </StatusPill>
+                {copyState && (
+                  <span className="flex items-center gap-1.5 text-[11px] font-semibold text-white/44">
+                    <FaClipboard size={10} />
+                    {copyState}
+                  </span>
+                )}
+              </div>
+              <StatsBar
+                charCount={charCount}
+                wordCount={wordCount}
+                extra={(
+                  <span className="flex items-center gap-1.5">
+                    <FaLock size={9} />
+                    本地保存
+                  </span>
+                )}
+              />
+            </div>
+          </div>
+        </div>
+      , document.body)}
+    </>
   );
 };
 

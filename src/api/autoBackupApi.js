@@ -1,5 +1,6 @@
 import { backupApi } from './backupApi';
 import {
+  clearStore,
   deleteRecord,
   getAllRecords,
   getRecord,
@@ -16,6 +17,12 @@ export const AUTO_BACKUP_DEFAULTS = {
 };
 
 export const AUTO_BACKUP_INTERVAL_OPTIONS = [
+  { value: 30, label: '30 分钟' },
+  { value: 60, label: '1 小时' },
+  { value: 360, label: '6 小时' },
+];
+
+export const AUTO_BACKUP_FILE_INTERVAL_OPTIONS = [
   { value: 30, label: '30 分钟' },
   { value: 60, label: '1 小时' },
   { value: 360, label: '6 小时' },
@@ -82,25 +89,31 @@ export async function getAutoBackupSettings() {
     enabled,
     intervalMinutes,
     fileBackupEnabled,
+    fileBackupIntervalMinutes,
     directoryHandle,
     lastSnapshotAt,
     lastFileBackupAt,
     lastError,
+    directoryName,
   ] = await Promise.all([
     getSetting('autoBackupEnabled', AUTO_BACKUP_DEFAULTS.enabled),
     getSetting('autoBackupIntervalMinutes', AUTO_BACKUP_DEFAULTS.intervalMinutes),
     getSetting('autoBackupFileEnabled', AUTO_BACKUP_DEFAULTS.fileBackupEnabled),
+    getSetting('autoBackupFileIntervalMinutes', AUTO_BACKUP_DEFAULTS.intervalMinutes),
     getSetting('autoBackupDirectoryHandle'),
     getSetting('autoBackupLastSnapshotAt'),
     getSetting('autoBackupLastFileAt'),
     getSetting('autoBackupLastError'),
+    getSetting('autoBackupDirectoryName', ''),
   ]);
 
   return {
     enabled,
     intervalMinutes,
     fileBackupEnabled,
+    fileBackupIntervalMinutes,
     hasDirectoryHandle: Boolean(directoryHandle),
+    directoryName: directoryHandle?.name || directoryName || '',
     lastSnapshotAt,
     lastFileBackupAt,
     lastError,
@@ -123,6 +136,7 @@ export async function chooseBackupDirectory() {
   });
   await verifyPermission(handle, 'readwrite');
   await setSetting('autoBackupDirectoryHandle', handle);
+  await setSetting('autoBackupDirectoryName', handle.name);
   await setSetting('autoBackupFileEnabled', true);
   await setSetting('autoBackupLastError', '');
   return getAutoBackupSettings();
@@ -164,6 +178,19 @@ export async function runAutoBackupIfDue({ force = false } = {}) {
   const settings = await getAutoBackupSettings();
   if (!settings.enabled && !force) return { skipped: true, reason: 'disabled', settings };
   if (!force && !shouldRun(settings.lastSnapshotAt, settings.intervalMinutes)) {
+    if (settings.hasDirectoryHandle && settings.fileBackupEnabled
+      && shouldRun(settings.lastFileBackupAt, settings.fileBackupIntervalMinutes)) {
+      try {
+        await createFileBackup();
+        return {
+          skipped: false, snapshot: null, fileBackedUp: true,
+          settings: await getAutoBackupSettings(),
+        };
+      } catch (error) {
+        await setSetting('autoBackupLastError', error.message);
+        return { skipped: true, reason: 'file-backup-error', settings: await getAutoBackupSettings() };
+      }
+    }
     return { skipped: true, reason: 'not-due', settings };
   }
 
@@ -172,11 +199,13 @@ export async function runAutoBackupIfDue({ force = false } = {}) {
     let fileBackedUp = false;
 
     if (settings.hasDirectoryHandle && (settings.fileBackupEnabled || force)) {
-      try {
-        await createFileBackup(snapshot.backup);
-        fileBackedUp = true;
-      } catch (error) {
-        await setSetting('autoBackupLastError', error.message);
+      if (force || shouldRun(settings.lastFileBackupAt, settings.fileBackupIntervalMinutes)) {
+        try {
+          await createFileBackup(snapshot.backup);
+          fileBackedUp = true;
+        } catch (error) {
+          await setSetting('autoBackupLastError', error.message);
+        }
       }
     }
 
@@ -238,6 +267,12 @@ export async function pruneBackupSnapshots() {
       .filter((row) => !keep.has(row.id))
       .map((row) => deleteRecord(SNAPSHOT_STORE, row.id)),
   );
+}
+
+export async function clearAllSnapshots() {
+  await clearStore(SNAPSHOT_STORE);
+  await setSetting('autoBackupLastSnapshotAt', '');
+  await setSetting('autoBackupLastFileAt', '');
 }
 
 export function formatBackupTime(value) {

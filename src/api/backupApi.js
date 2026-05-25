@@ -41,7 +41,9 @@ function normalizeWidgetRows(widgets = []) {
 }
 
 function serializeSettings(settings = []) {
-  return settings.filter((row) => row?.key !== 'autoBackupDirectoryHandle');
+  return settings.filter(
+    (row) => row?.key !== 'autoBackupDirectoryHandle' && row?.key !== 'autoBackupDirectoryName',
+  );
 }
 
 function normalizeMarkdownRows(entries = []) {
@@ -142,6 +144,7 @@ export const backupApi = {
     await importAllStores(hydrated);
     if (directoryHandle) {
       await setSetting('autoBackupDirectoryHandle', directoryHandle);
+      await setSetting('autoBackupDirectoryName', directoryHandle.name);
       await setSetting('autoBackupFileEnabled', fileBackupEnabled ?? false);
     }
     return { ok: true, counts: countsFor(hydrated) };

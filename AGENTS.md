@@ -272,10 +272,32 @@ new Date().toISOString().slice(0, 10)
 Markdown 相关文件：
 
 - `src/components/workarea/MarkdownEditor.jsx`
+- `src/components/workarea/VditorWrapper.jsx`
 - `src/components/workarea/MarkdownPreview.jsx`
+- `src/components/workarea/TabBar.jsx`
 - `src/store/useMarkdownStore.js`
 - `src/styles/animations.css`
+- `src/styles/vditor-overrides.css`
 - `src/utils/sanitizeHtml.js`
+
+编辑器有两种模式（`editorMode: 'plain' | 'markdown'`），通过 SegmentedControl 切换：
+
+- **纯文本模式**（`plain`）：标准 textarea，输入原始文本。
+- **Markdown 模式**（`markdown`）：基于 Vditor 的 WYSIWYG 实时渲染引擎（Typora 风格）。
+- content 始终保存为原始 markdown，不混入 HTML。TXT/JSON 导出使用原始 markdown。
+- Markdown 模式下，Vditor 接管 markdown→HTML 渲染和 HTML→markdown 输出的全部工作。
+- `VditorWrapper` 通过 `isUpdatingRef` 防止 `setValue` 触发 `input` 回调导致更新循环。
+- 切换日期时，Vditor 自动通过 `content` prop 重新加载对应日期的 markdown 内容。
+
+编辑器分页规则：
+
+- `src/components/workarea/TabBar.jsx` — 标签栏组件，支持新建、切换、关闭、双击重命名页面。
+- 每个日期可创建多个独立页面（`pages` 数组），存储在同一个 IndexedDB 记录中，不改变 DB schema。
+- 旧数据自动兼容：加载时无 `pages` 字段的记录自动包装为单页 `[{ id, title: '草稿', content }]`。
+- `useMarkdownStore` 的 `pages`/`activePageId` 状态控制当前页，`setContent` 只更新活跃页内容。
+- 切换页面时自动更新 `content`、`wordCount`、`charCount` 为对应页的数据。
+- 清空/撤回绑定当前页面：`clearedDraft` 记录 `pageId`，切换页面后撤回按钮自动禁用。
+- TXT 导出只导出当前活跃页内容。
 
 草稿保存规则：
 
@@ -365,6 +387,8 @@ desktop-widgets-backup-YYYY-MM-DD.json
 
 - 置顶记录是长期文本板，不按日期变化，不跨天清空。
 - 第一版只做一个普通文本区域，不加标题、标签、Markdown 或复杂笔记结构。
+- 支持展开为全屏大窗口编辑（点击 FaExpandAlt 按钮），展开弹窗与卡片视图共享同一 state，无独立状态。
+- 展开弹窗通过条件渲染（`expanded` state）内联在主组件中，使用 `createPortal` 渲染到 `document.body` 以避开 Layout 容器 `transform` 对 `position: fixed` 的影响。
 - 内容自动保存到 IndexedDB `pinned_notes`，主键固定为 `main`。
 - UI 必须保留复制全文、清空和撤回清空，避免误删后无法恢复。
 - 内容很多时必须在组件内部滚动，不能撑高工作区侧栏。
@@ -392,7 +416,10 @@ Markdown 备份兼容规则：
 - Chrome / Edge 桌面端支持 File System Access API 时，可以让用户选择电脑备份文件夹，并在自动备份时额外写入 JSON 文件。
 - Safari、Firefox 和多数移动端通常不支持网页写入用户选择的电脑文件夹；UI 必须明确说明限制。
 - `autoBackupDirectoryHandle` 是浏览器授权句柄，只能存在本机 IndexedDB setting 中，不能导出到 JSON。
+- `autoBackupDirectoryName` 是文件夹名称，同样不进入 JSON 导出，导入时从句柄重新读取。
+- 电脑文件夹备份有独立的频率控制（`fileBackupIntervalMinutes`），不再依附于自动快照频率。
 - 导入 JSON 或恢复快照时，应尽量保留当前浏览器已经授权的备份文件夹句柄。
+- `backup_snapshots` 提供一键清空功能（`clearAllSnapshots`），用于快速清理所有内部快照。
 
 ## 域名迁移警告
 

@@ -22,7 +22,22 @@
       "Bash(curl -s -X PUT http://localhost:3001/api/markdown -H \"Content-Type: application/json\" -d '{\"date\":\"2026-05-13\",\"content\":\"# Daily Notes\\\\nToday I built a great app.\"}')",
       "Bash(curl -s -X POST http://localhost:3001/api/reviews/generate -H \"Content-Type: application/json\" -d '{\"date\":\"2026-05-13\"}')",
       "Bash(curl -s -X POST http://localhost:3001/api/pomodoro -H \"Content-Type: application/json\" -d '{\"date\":\"2026-05-13\",\"duration\":25}')",
-      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(f'Todos: {len\\(d[\\\\\"data\\\\\"][\\\\\"todos\\\\\"]\\)}, Markdown: {len\\(d[\\\\\"data\\\\\"][\\\\\"markdown_entries\\\\\"]\\)}, Reviews: {len\\(d[\\\\\"data\\\\\"][\\\\\"daily_reviews\\\\\"]\\)}, Pomodoro: {len\\(d[\\\\\"data\\\\\"][\\\\\"pomodoro_sessions\\\\\"]\\)}'\\)\")"
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(f'Todos: {len\\(d[\\\\\"data\\\\\"][\\\\\"todos\\\\\"]\\)}, Markdown: {len\\(d[\\\\\"data\\\\\"][\\\\\"markdown_entries\\\\\"]\\)}, Reviews: {len\\(d[\\\\\"data\\\\\"][\\\\\"daily_reviews\\\\\"]\\)}, Pomodoro: {len\\(d[\\\\\"data\\\\\"][\\\\\"pomodoro_sessions\\\\\"]\\)}'\\)\")",
+      "Bash(npm run *)",
+      "WebSearch",
+      "WebFetch(domain:ld246.com)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:b3log.org)",
+      "WebFetch(domain:cdn.jsdelivr.net)",
+      "WebFetch(domain:www.npmjs.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:unpkg.com)",
+      "WebFetch(domain:blog.csdn.net)",
+      "WebFetch(domain:www.cnblogs.com)",
+      "WebFetch(domain:gitee.com)",
+      "Bash(npm pack *)",
+      "Bash(npm uninstall *)",
+      "Bash(node *)"
     ]
   }
 }

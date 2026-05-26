@@ -1,11 +1,13 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Vditor from 'vditor';
 import 'vditor/dist/index.css';
 
 const VditorWrapper = ({ content, onContentChange, className = '' }) => {
   const containerRef = useRef(null);
   const vditorRef = useRef(null);
-  const isUpdatingRef = useRef(false);
+  const isDestroyingRef = useRef(false);
+  const pendingContentRef = useRef(null);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -24,14 +26,16 @@ const VditorWrapper = ({ content, onContentChange, className = '' }) => {
         counter: { enable: false },
         value: content || '',
         input: (value) => {
-          if (isUpdatingRef.current) {
-            isUpdatingRef.current = false;
-            return;
-          }
+          if (isDestroyingRef.current) return;
           onContentChange(value);
         },
         after: () => {
           vditorRef.current = instance;
+          setReady(true);
+          if (pendingContentRef.current !== null && pendingContentRef.current !== '') {
+            instance.setValue(pendingContentRef.current, false);
+            pendingContentRef.current = null;
+          }
         },
       });
     } catch (e) {
@@ -40,6 +44,16 @@ const VditorWrapper = ({ content, onContentChange, className = '' }) => {
     }
 
     return () => {
+      isDestroyingRef.current = true;
+      // Save Vditor's current content to store before destroy
+      try {
+        const lastContent = instance.getValue();
+        if (lastContent && lastContent !== '' && onContentChange) {
+          onContentChange(lastContent);
+        }
+      } catch {
+        // Vditor may not be fully initialized yet
+      }
       vditorRef.current = null;
       try {
         instance.destroy();
@@ -52,16 +66,27 @@ const VditorWrapper = ({ content, onContentChange, className = '' }) => {
 
   useEffect(() => {
     const vd = vditorRef.current;
-    if (!vd) return;
+    if (!vd) {
+      pendingContentRef.current = content || '';
+      return;
+    }
 
     const currentContent = vd.getValue();
     if (currentContent === content) return;
 
-    isUpdatingRef.current = true;
     vd.setValue(content || '', false);
   }, [content]);
 
-  return <div ref={containerRef} className={className} />;
+  return (
+    <div className={`relative ${className}`}>
+      {!ready && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center text-sm text-white/34">
+          编辑器加载中...
+        </div>
+      )}
+      <div ref={containerRef} className="h-full w-full" />
+    </div>
+  );
 };
 
 export default VditorWrapper;

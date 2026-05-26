@@ -136,6 +136,10 @@
   padding-left: 1.45rem;
 }
 
+.vditor-reset ol {
+  list-style-type: decimal;
+}
+
 .vditor-reset li {
   margin: 0.3rem 0;
   padding-left: 0.2rem;
@@ -221,14 +225,22 @@
   margin: 1.6rem 0;
 }
 
-/* Tables */
+/* Tables — override Vditor light-theme defaults (white tr background) */
 .vditor-reset table {
   border-collapse: collapse;
-  display: block;
   margin: 1rem 0;
   max-width: 100%;
-  overflow-x: auto;
-  width: max-content;
+  width: 100%;
+  background: transparent !important;
+}
+
+.vditor-reset table tr {
+  background: transparent !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.vditor-reset table tbody tr:nth-child(2n) {
+  background: transparent !important;
 }
 
 .vditor-reset th,
@@ -237,16 +249,29 @@
   font-size: 0.9rem;
   padding: 0.55rem 0.75rem;
   text-align: left;
+  min-width: 3rem;
+  vertical-align: top;
+  background: transparent !important;
 }
 
 .vditor-reset th {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.08) !important;
   color: rgba(255, 255, 255, 0.92);
   font-weight: 700;
 }
 
 .vditor-reset tr:nth-child(even) td {
-  background: rgba(255, 255, 255, 0.035);
+  background: rgba(255, 255, 255, 0.035) !important;
+}
+
+/* Table wrapper for horizontal scroll in WYSIWYG mode */
+.vditor-wysiwyg .tableWrapper {
+  overflow-x: auto;
+  margin: 1rem 0;
+}
+
+.vditor-wysiwyg .tableWrapper table {
+  margin: 0;
 }
 
 /* Hide counter (we have our own) */
@@ -254,7 +279,7 @@
   display: none !important;
 }
 
-/* Hide heading block markers (H1, H2 etc.) in WYSIWYG mode */
+/* Hide heading block markers in WYSIWYG mode */
 .vditor-wysiwyg > .vditor-reset > h1:before,
 .vditor-wysiwyg > .vditor-reset > h2:before,
 .vditor-wysiwyg > .vditor-reset > h3:before,

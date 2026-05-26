@@ -1,5 +1,16 @@
 export const CHANGELOG = [
   {
+    date: '2026-05-26',
+    title: '表格背景修复 + 模式切换内容丢失修复',
+    summary: 'Vditor 表格白色背景修复，Markdown↔纯文本切换内容丢失修复，新页面 Markdown 模式 stats 不更新修复。',
+    items: [
+      'Vditor 表格 `tr`/`td`/`th` 默认白色背景覆盖为透明，适配暗色主题。',
+      'VditorWrapper cleanup 在 destroy 前主动保存内容到 store，防止 input("") 清空内容。',
+      '移除 isUpdatingRef 守卫避免误拦截用户输入，修复新页面 Markdown 模式下字符统计不更新的问题。',
+      'MarkdownEditor 新增 contentBackupRef 兜底，模式切换时内容不回退。',
+    ],
+  },
+  {
     date: '2026-05-25',
     title: '编辑器重构：Vditor WYSIWYG 替代 contentEditable',
     summary: 'Markdown 编辑器重写为 Vditor 所见即所得引擎，彻底解决实时渲染问题。',

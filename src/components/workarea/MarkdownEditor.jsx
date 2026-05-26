@@ -38,6 +38,19 @@ const MarkdownEditor = ({ todayKey }) => {
   const [clearedDraft, setClearedDraft] = useState(null);
   const textareaRef = useRef(null);
   const hasEditedRef = useRef(false);
+  const contentBackupRef = useRef('');
+  const prevPageRef = useRef(activePageId);
+
+  // Reset backup ref when page/tab changes (new page should be blank)
+  if (activePageId !== prevPageRef.current) {
+    prevPageRef.current = activePageId;
+    contentBackupRef.current = '';
+  }
+
+  // Capture latest non-empty content as fallback across mode switches
+  if (content) {
+    contentBackupRef.current = content;
+  }
 
   useEffect(() => {
     setCurrentDate(todayKey);
@@ -85,6 +98,11 @@ const MarkdownEditor = ({ todayKey }) => {
     hasEditedRef.current = true;
     setClearedDraft(null);
     setContent(value);
+  };
+
+  const handleTextareaChange = (e) => {
+    contentBackupRef.current = e.target.value;
+    handleChange(e.target.value);
   };
 
   const handleExportTxt = async () => {
@@ -197,7 +215,15 @@ const MarkdownEditor = ({ todayKey }) => {
               </StatusPill>
               <SegmentedControl
                 value={editorMode}
-                onChange={setEditorMode}
+                onChange={(newMode) => {
+                  if (newMode === 'markdown' && editorMode === 'plain') {
+                    // Restore backup content when entering Markdown mode
+                    if (contentBackupRef.current && !content) {
+                      setContent(contentBackupRef.current);
+                    }
+                  }
+                  setEditorMode(newMode);
+                }}
                 options={[
                   { value: 'plain', label: '纯文本' },
                   { value: 'markdown', label: 'Markdown' },
@@ -241,8 +267,8 @@ const MarkdownEditor = ({ todayKey }) => {
         ) : (
           <textarea
             ref={textareaRef}
-            value={content}
-            onChange={(e) => handleChange(e.target.value)}
+            value={content || contentBackupRef.current}
+            onChange={handleTextareaChange}
             onKeyDown={handleTextareaKeyDown}
             placeholder="写下你的记录..."
             className="h-full w-full resize-none bg-transparent p-5 text-[15px] leading-8 text-white/86 outline-none placeholder-white/26 selection:bg-[#80bfff]/30 md:p-6 md:text-base"

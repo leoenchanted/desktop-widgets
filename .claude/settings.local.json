@@ -37,7 +37,8 @@
       "WebFetch(domain:gitee.com)",
       "Bash(npm pack *)",
       "Bash(npm uninstall *)",
-      "Bash(node *)"
+      "Bash(node *)",
+      "Bash(curl *)"
     ]
   }
 }

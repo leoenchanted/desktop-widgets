@@ -286,8 +286,16 @@ Markdown 相关文件：
 - **Markdown 模式**（`markdown`）：基于 Vditor 的 WYSIWYG 实时渲染引擎（Typora 风格）。
 - content 始终保存为原始 markdown，不混入 HTML。TXT/JSON 导出使用原始 markdown。
 - Markdown 模式下，Vditor 接管 markdown→HTML 渲染和 HTML→markdown 输出的全部工作。
-- `VditorWrapper` 通过 `isUpdatingRef` 防止 `setValue` 触发 `input` 回调导致更新循环。
 - 切换日期时，Vditor 自动通过 `content` prop 重新加载对应日期的 markdown 内容。
+- WYSIWYG 模式下表格通过 setValue() 加载时由 Lute 解析渲染为 HTML 表格，不支持管道符手动输入表格。
+
+内容安全机制：
+
+- **VditorWrapper cleanup 存档**：组件卸载时先通过 `onContentChange(instance.getValue())` 主动保存 Vditor 当前内容到 store，再执行 `destroy()`。防止 destroy 阶段异步 `input("")` 清空 store。
+- **isDestroyingRef**：`input` 回调中检查 `isDestroyingRef.current`，为 true 时直接 return，阻止销毁阶段残留事件传播。
+- **MarkdownEditor contentBackupRef**：render 阶段捕获最新非空 `content` 到 ref，textarea 使用 `value={content || contentBackupRef.current}` 兜底，模式切换时如果 store 被清空则从 ref 恢复。
+- **模式切换恢复**：从纯文本切回 Markdown 时，如果 store 内容为空但 ref 有内容，自动 `setContent(contentBackupRef.current)` 恢复。
+- 不再使用 `isUpdatingRef` 守卫（`setValue(content, false)` 的 false 参数本身足够防止循环），移除后修复了新页面 Markdown 模式打字 stats 不更新的问题。
 
 编辑器分页规则：
 

@@ -1,5 +1,27 @@
 export const CHANGELOG = [
   {
+    date: '2026-05-28',
+    title: 'Todo 置顶行为修正 + FLIP 动画',
+    summary: '置顶/取消置顶的日期边界逻辑修正，新增 framer-motion 重排动画。',
+    items: [
+      '置顶时 sort_order 设为 0 并下移其他 todo，自动移到列表顶部，带 framer-motion layout 动画。',
+      '取消置顶时：未来日期的副本直接删除，过去日期的保留记录只取消置顶，不再继续克隆。',
+      '克隆只向未来方向：source.date < date，往回翻日期不会看到克隆项。',
+      '新增 framer-motion 依赖，TodoItem 使用 motion.div + AnimatePresence 支持列表重排和进出场动画。',
+    ],
+  },
+  {
+    date: '2026-05-28',
+    title: 'Todo 每日重复功能（图钉置顶）',
+    summary: 'Todo 支持标记为每日重复，每天自动克隆为未完成状态。',
+    items: [
+      '每条 todo 新增图钉按钮（📌），点击后标记为每日重复。',
+      '置顶的 todo 会生成 pinGroupId，第二天加载时自动克隆到当天、状态重置为未完成。',
+      '取消置顶后停止克隆，历史日期的副本不受影响。',
+      '克隆采用延迟策略：只在加载目标日期时检测并补充，不预生成未来数据。',
+    ],
+  },
+  {
     date: '2026-05-26',
     title: '表格背景修复 + 模式切换内容丢失修复',
     summary: 'Vditor 表格白色背景修复，Markdown↔纯文本切换内容丢失修复，新页面 Markdown 模式 stats 不更新修复。',

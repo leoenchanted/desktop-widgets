@@ -17,6 +17,7 @@
 
 - 前端：React 19、Vite、Tailwind CSS v4、Zustand。
 - 拖拽：`@dnd-kit`。
+- 动画：`framer-motion`。
 - 图标：`react-icons`。
 - Markdown：`marked` + 本地 HTML 清理函数。
 - 浏览器数据库：IndexedDB，封装在 `src/data/localDb.js`。
@@ -266,6 +267,16 @@ new Date().toISOString().slice(0, 10)
 - TodoList 的任务列表层必须脱离普通文档流：外层 `todo-list-panel` 相对定位，头部 `todo-list-header` 固定高度，任务滚动层 `todo-list-scroll` 绝对定位到底部，防止任务项参与卡片高度计算。
 - Todo 日期选择器需要保留可见弹层；日期弹层应通过 portal/fixed 浮在 body 上，不要依赖卡片外层 `overflow-visible`。
 - 窄屏和移动端不能只靠 grid 行高继承；`workspace-fixed-panel` 自身也必须设置固定高度和 `max-height`，防止内容反推卡片高度。
+
+Todo 每日重复（图钉置顶）规则：
+
+- 每条 todo 支持 `pinned: boolean` 和 `pinGroupId: string` 字段。
+- 点击图钉按钮 → 生成新 `pinGroupId`（uuid），设置 `pinned: true`，同时 `sort_order: 0`，其他 todo 下移，置顶项自动移到列表最前面（带 framer-motion 动画）。
+- 取消置顶 → 当前日期取消置顶；**未来日期**的同 `pinGroupId` 实例直接删除；**过去日期**的实例保留记录但取消置顶，不再继续克隆。
+- `todoApi.clonePinnedForDate(date)` 在 `fetchTodos` 加载目标日期时调用。
+- 克隆逻辑：扫描所有 `pinned: true` 的记录 → 按 `pinGroupId` 去重保留最新 → 只从比目标日期更早的源克隆（`source.date < date`）→ 检查目标日期是否已有同组 ID → 没有则克隆（`completed: 0`）。
+- 克隆是延迟策略：不预生成数据，只在加载日期时检测补充。修改已置顶 todo 的文字后，后续克隆会使用新文字。
+- TodoItem 使用 `motion.div` + `layout` 属性，列表重排时自动 FLIP 动画。
 
 ## Markdown 规则
 

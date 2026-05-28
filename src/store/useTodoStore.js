@@ -21,6 +21,8 @@ export const useTodoStore = create((set, get) => ({
   fetchTodos: async (date) => {
     set({ loading: true });
     try {
+      // Clone pinned todos from previous dates for this date
+      await todoApi.clonePinnedForDate(date);
       const items = await todoApi.getByDate(date);
       set({ items, loading: false });
     } catch {
@@ -56,6 +58,14 @@ export const useTodoStore = create((set, get) => ({
   deleteTodo: async (id) => {
     await todoApi.delete(id);
     set((s) => ({ items: s.items.filter((i) => i.id !== id) }));
+  },
+
+  togglePin: async (id) => {
+    await todoApi.togglePin(id);
+    // Refetch sorted list so sort_order changes take effect
+    const { currentDate } = get();
+    const items = await todoApi.getByDate(currentDate);
+    set({ items });
   },
 
   reorderTodos: async (orderedIds) => {

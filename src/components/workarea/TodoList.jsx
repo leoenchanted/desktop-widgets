@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { AnimatePresence } from 'framer-motion';
 import { FaPlus, FaTasks } from 'react-icons/fa';
 import { useTodoStore } from '../../store/useTodoStore';
 import TodoItem from './TodoItem';
@@ -16,6 +17,7 @@ const TodoList = ({ todayKey }) => {
     setCurrentDate,
     addTodo,
     toggleTodo,
+    togglePin,
     deleteTodo,
     updateTodo,
     fetchDates,
@@ -111,15 +113,18 @@ const TodoList = ({ todayKey }) => {
           <EmptyState title="今天还没有任务" icon={FaTasks} />
         ) : (
           <div className="space-y-1">
-            {items.map((todo) => (
-              <TodoItem
-                key={todo.id}
-                todo={todo}
-                onToggle={toggleTodo}
-                onDelete={deleteTodo}
-                onUpdate={updateTodo}
-              />
-            ))}
+            <AnimatePresence initial={false}>
+              {items.map((todo) => (
+                <TodoItem
+                  key={todo.id}
+                  todo={todo}
+                  onToggle={toggleTodo}
+                  onTogglePin={togglePin}
+                  onDelete={deleteTodo}
+                  onUpdate={updateTodo}
+                />
+              ))}
+            </AnimatePresence>
           </div>
         )}
       </div>

@@ -11,11 +11,13 @@ import BackupReminder from './components/BackupReminder';
 import ChangelogPanel from './components/ChangelogPanel';
 import WallpaperPanel from './components/WallpaperPanel';
 import DomainMigrationWarning from './components/DomainMigrationWarning';
+import WorkspaceFxControl from './components/WorkspaceFxControl';
 import { useSettingsStore } from './store/useSettingsStore';
 import { useCommandPalette } from './hooks/useCommandPalette';
 import { useWindowControlsOverlay } from './hooks/useWindowControlsOverlay';
 import { useAutoBackup } from './hooks/useAutoBackup';
 import WorkArea from './components/workarea/WorkArea';
+import WorkspaceFxLayer from './components/workarea/WorkspaceFxLayer';
 import IconButton from './components/ui/IconButton';
 import { WIDGET_REGISTRY, normalizeWidgetLayout } from './config/widgetRegistry';
 import { getRecord, putRecord } from './data/localDb';
@@ -81,6 +83,8 @@ function App() {
     bg,
     isEditMode,
     initializeSettings,
+    workspaceFxEnabled,
+    workspaceFxMode,
   } = useSettingsStore();
   const cmdPalette = useCommandPalette();
   useWindowControlsOverlay();
@@ -252,22 +256,25 @@ function App() {
   return (
     <div className="app-shell min-h-screen w-full pb-24 text-white">
       <div className="pointer-events-none fixed inset-0 -z-10 bg-black/22" />
+      <WorkspaceFxLayer enabled={workspaceFxEnabled} mode={workspaceFxMode} scope="global" />
 
-      <Header
-        onTogglePicker={() => setShowPicker((value) => !value)}
-        onOpenWallpaper={() => setShowWallpaperPanel(true)}
-        showPicker={showPicker}
-      />
+      <div className="app-content-layer">
+        <Header
+          onTogglePicker={() => setShowPicker((value) => !value)}
+          onOpenWallpaper={() => setShowWallpaperPanel(true)}
+          showPicker={showPicker}
+        />
 
-      <div ref={pickerRef} className="relative z-[999]">
-        {showPicker && (
-          <div className="absolute right-6 top-0 mt-2 md:right-8">
-            <WidgetPicker onAdd={handleAddWidget} />
-          </div>
-        )}
+        <div ref={pickerRef} className="relative z-[999]">
+          {showPicker && (
+            <div className="absolute right-6 top-0 mt-2 md:right-8">
+              <WidgetPicker onAdd={handleAddWidget} />
+            </div>
+          )}
+        </div>
+
+        <Layout widgetBoard={widgetBoard} workArea={<WorkArea />} />
       </div>
-
-      <Layout widgetBoard={widgetBoard} workArea={<WorkArea />} />
 
       <BackupReminder onOpenBackup={() => setShowExportImport(true)} />
       <DomainMigrationWarning />
@@ -293,7 +300,8 @@ function App() {
       )}
 
       {!cmdPalette.isOpen && (
-        <div className="fixed bottom-[calc(env(safe-area-inset-bottom)+1rem)] right-5 z-30 flex flex-col gap-3 md:right-6">
+        <div className="fixed bottom-[calc(env(safe-area-inset-bottom)+1rem)] right-5 z-30 flex flex-col items-end gap-3 md:right-6">
+          <WorkspaceFxControl />
           <IconButton
             icon={FaDownload}
             onClick={() => setShowExportImport(true)}

@@ -7,6 +7,7 @@ import {
   setSetting,
 } from '../data/localDb';
 import { wallpaperApi } from '../api/wallpaperApi';
+import { DEFAULT_WORKSPACE_FX_MODE, WORKSPACE_FX_MODE_VALUES } from '../config/workspaceFxModes';
 
 const DEFAULT_BG =
   'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?ixlib=rb-4.0.3&auto=format&fit=crop&w=2940&q=80';
@@ -36,6 +37,8 @@ export const useSettingsStore = create((set, get) => ({
   wallpaperAssetId: null,
   storagePersisted: false,
   storageEstimate: null,
+  workspaceFxEnabled: false,
+  workspaceFxMode: DEFAULT_WORKSPACE_FX_MODE,
 
   initializeSettings: async () => {
     if (get().initialized) return;
@@ -47,6 +50,7 @@ export const useSettingsStore = create((set, get) => ({
       storedWallpaperKind,
       storedWallpaperAssetId,
       persistentRequested,
+      storedWorkspaceFxMode,
     ] = await Promise.all([
       getSetting('bg'),
       getSetting('username'),
@@ -54,6 +58,7 @@ export const useSettingsStore = create((set, get) => ({
       getSetting('wallpaperKind'),
       getSetting('wallpaperAssetId'),
       getSetting('persistentStorageRequested', false),
+      getSetting('workspaceFxMode', DEFAULT_WORKSPACE_FX_MODE),
     ]);
 
     let bg = storedBg || legacyValue('glass_bg') || DEFAULT_BG;
@@ -79,6 +84,9 @@ export const useSettingsStore = create((set, get) => ({
     }
 
     const storageEstimate = await estimateStorage();
+    const workspaceFxMode = WORKSPACE_FX_MODE_VALUES.has(storedWorkspaceFxMode)
+      ? storedWorkspaceFxMode
+      : DEFAULT_WORKSPACE_FX_MODE;
 
     set({
       bg,
@@ -87,6 +95,8 @@ export const useSettingsStore = create((set, get) => ({
       wallpaperAssetId,
       storagePersisted,
       storageEstimate,
+      workspaceFxEnabled: false,
+      workspaceFxMode,
       initialized: true,
     });
   },
@@ -119,6 +129,16 @@ export const useSettingsStore = create((set, get) => ({
   setSection: (activeSection) => {
     set({ activeSection });
     persistSetting('activeSection', activeSection);
+  },
+
+  setWorkspaceFxEnabled: (workspaceFxEnabled) => {
+    set({ workspaceFxEnabled });
+  },
+
+  setWorkspaceFxMode: (workspaceFxMode) => {
+    if (!WORKSPACE_FX_MODE_VALUES.has(workspaceFxMode)) return;
+    set({ workspaceFxMode });
+    persistSetting('workspaceFxMode', workspaceFxMode);
   },
 
   toggleEditMode: () => set((state) => ({ isEditMode: !state.isEditMode })),

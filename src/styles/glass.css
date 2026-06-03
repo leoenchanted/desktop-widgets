@@ -62,6 +62,11 @@
   z-index: 20;
 }
 
+.app-content-layer {
+  position: relative;
+  z-index: 10;
+}
+
 .titlebar-drag-zone {
   display: none;
 }
@@ -153,6 +158,135 @@
 
 .draft-toolbar-button:active {
   transform: translateZ(0);
+}
+
+.workspace-editor-panel {
+  isolation: isolate;
+}
+
+.workspace-editor-panel .soft-divider {
+  position: relative;
+  z-index: 10;
+}
+
+.workspace-fx-layer {
+  border-radius: inherit;
+  inset: 0;
+  opacity: 0.82;
+  overflow: hidden;
+  pointer-events: none;
+  position: absolute;
+  z-index: 0;
+}
+
+.workspace-fx-layer-global {
+  border-radius: 0;
+  height: auto;
+  inset: 0;
+  opacity: 0.96;
+  position: fixed;
+  width: auto;
+  z-index: 1;
+}
+
+.workspace-fx-layer::after {
+  background:
+    linear-gradient(180deg, rgba(4, 8, 13, 0.08), rgba(4, 8, 13, 0.48)),
+    radial-gradient(circle at 50% 18%, rgba(156, 201, 255, 0.11), transparent 45%),
+    linear-gradient(90deg, rgba(154, 233, 189, 0.045), transparent 28%, rgba(156, 201, 255, 0.06));
+  content: "";
+  inset: 0;
+  pointer-events: none;
+  position: absolute;
+}
+
+.workspace-fx-layer-global::after {
+  background:
+    linear-gradient(180deg, rgba(5, 8, 12, 0.04), rgba(5, 8, 12, 0.24)),
+    radial-gradient(circle at 50% 4%, rgba(156, 201, 255, 0.16), transparent 52%),
+    linear-gradient(90deg, rgba(154, 233, 189, 0.06), transparent 32%, rgba(156, 201, 255, 0.08));
+}
+
+.workspace-fx-canvas {
+  display: block;
+  height: 100%;
+  width: 100%;
+}
+
+.workspace-fx-canvas {
+  mix-blend-mode: screen;
+}
+
+.workspace-fx-control {
+  align-items: center;
+  display: flex;
+  gap: 0.75rem;
+  pointer-events: auto;
+  position: relative;
+}
+
+.workspace-fx-popover {
+  bottom: calc(100% + 0.75rem);
+  min-width: min(18rem, calc(100vw - 2.5rem));
+  padding: 0.75rem;
+  position: absolute;
+  right: 0;
+}
+
+.workspace-fx-power {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  color: rgba(255, 255, 255, 0.72);
+  display: flex;
+  gap: 0.75rem;
+  min-height: 3.6rem;
+  padding: 0.55rem 0.65rem;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease;
+  width: 100%;
+}
+
+.workspace-fx-power:hover,
+.workspace-fx-power.is-on {
+  background: rgba(156, 201, 255, 0.14);
+  border-color: rgba(156, 201, 255, 0.28);
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.workspace-fx-options {
+  display: grid;
+  gap: 0.45rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 0.65rem;
+}
+
+.workspace-fx-option {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  color: rgba(255, 255, 255, 0.62);
+  display: flex;
+  font-size: 0.78rem;
+  font-weight: 700;
+  justify-content: space-between;
+  min-height: 2.25rem;
+  padding: 0 0.7rem;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease;
+}
+
+.workspace-fx-option:hover,
+.workspace-fx-option.is-selected {
+  background: rgba(154, 233, 189, 0.12);
+  border-color: rgba(154, 233, 189, 0.28);
+  color: rgba(255, 255, 255, 0.92);
 }
 
 .workspace-grid {

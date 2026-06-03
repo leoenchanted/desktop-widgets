@@ -36,25 +36,32 @@ const MarkdownEditor = ({ todayKey }) => {
   const [editorMode, setEditorMode] = useState('plain');
   const [saveState, setSaveState] = useState('idle');
   const [clearedDraft, setClearedDraft] = useState(null);
+  const [contentBackup, setContentBackup] = useState({ pageId: activePageId, content: '' });
   const textareaRef = useRef(null);
   const hasEditedRef = useRef(false);
-  const contentBackupRef = useRef('');
-  const prevPageRef = useRef(activePageId);
-
-  // Reset backup ref when page/tab changes (new page should be blank)
-  if (activePageId !== prevPageRef.current) {
-    prevPageRef.current = activePageId;
-    contentBackupRef.current = '';
-  }
-
-  // Capture latest non-empty content as fallback across mode switches
-  if (content) {
-    contentBackupRef.current = content;
-  }
+  const backupContent = contentBackup.pageId === activePageId ? contentBackup.content : '';
 
   useEffect(() => {
     setCurrentDate(todayKey);
   }, [setCurrentDate, todayKey]);
+
+  useEffect(() => {
+    if (content) {
+      let cancelled = false;
+      window.queueMicrotask(() => {
+        if (cancelled) return;
+        setContentBackup((current) => (
+          current.pageId === activePageId && current.content === content
+            ? current
+            : { pageId: activePageId, content }
+        ));
+      });
+      return () => {
+        cancelled = true;
+      };
+    }
+    return undefined;
+  }, [activePageId, content]);
 
   useEffect(() => {
     hasEditedRef.current = false;
@@ -101,7 +108,7 @@ const MarkdownEditor = ({ todayKey }) => {
   };
 
   const handleTextareaChange = (e) => {
-    contentBackupRef.current = e.target.value;
+    setContentBackup({ pageId: activePageId, content: e.target.value });
     handleChange(e.target.value);
   };
 
@@ -140,6 +147,7 @@ const MarkdownEditor = ({ todayKey }) => {
     if (!content || loading) return;
     setClearedDraft({ content, date: currentDate, pageId: activePageId });
     hasEditedRef.current = true;
+    setContentBackup({ pageId: activePageId, content: '' });
     setContent('');
     await persistAfterProgrammaticChange();
   };
@@ -177,8 +185,8 @@ const MarkdownEditor = ({ todayKey }) => {
           : '长期保留';
 
   return (
-    <GlassPanel className="flex h-full min-h-[520px] flex-col overflow-hidden" padded={false}>
-      <div className="px-5 pb-3 pt-5">
+    <GlassPanel className="workspace-editor-panel relative flex h-full min-h-[520px] flex-col overflow-hidden" padded={false}>
+      <div className="relative z-10 px-5 pb-3 pt-5">
         <PanelHeader
           eyebrow="Markdown"
           title="日记草稿"
@@ -218,8 +226,8 @@ const MarkdownEditor = ({ todayKey }) => {
                 onChange={(newMode) => {
                   if (newMode === 'markdown' && editorMode === 'plain') {
                     // Restore backup content when entering Markdown mode
-                    if (contentBackupRef.current && !content) {
-                      setContent(contentBackupRef.current);
+                    if (backupContent && !content) {
+                      setContent(backupContent);
                     }
                   }
                   setEditorMode(newMode);
@@ -234,7 +242,7 @@ const MarkdownEditor = ({ todayKey }) => {
         />
       </div>
 
-      <div className="px-5 pb-3">
+      <div className="relative z-10 px-5 pb-3">
         <DatePickerPopover
           currentDate={currentDate}
           onDateChange={setCurrentDate}
@@ -242,43 +250,45 @@ const MarkdownEditor = ({ todayKey }) => {
         />
       </div>
 
-      <TabBar
-        pages={pages}
-        activePageId={activePageId}
-        onSwitch={switchPage}
-        onAdd={addPage}
-        onRemove={removePage}
-        onRename={renamePage}
-      />
+      <div className="relative z-10">
+        <TabBar
+          pages={pages}
+          activePageId={activePageId}
+          onSwitch={switchPage}
+          onAdd={addPage}
+          onRemove={removePage}
+          onRename={renamePage}
+        />
+      </div>
 
       <div className="soft-divider" />
 
-      <div className="relative min-h-0 flex-1 overflow-hidden">
+      <div className="relative z-10 min-h-0 flex-1 overflow-hidden">
         {loading ? (
-          <div className="flex h-full items-center justify-center text-sm text-white/35">
+          <div className="relative z-10 flex h-full items-center justify-center text-sm text-white/35">
             加载中...
           </div>
         ) : editorMode === 'markdown' ? (
           <VditorWrapper
             content={content}
             onContentChange={handleChange}
-            className="h-full w-full"
+            className="relative z-10 h-full w-full"
           />
         ) : (
           <textarea
             ref={textareaRef}
-            value={content || contentBackupRef.current}
+            value={content || backupContent}
             onChange={handleTextareaChange}
             onKeyDown={handleTextareaKeyDown}
             placeholder="写下你的记录..."
-            className="h-full w-full resize-none bg-transparent p-5 text-[15px] leading-8 text-white/86 outline-none placeholder-white/26 selection:bg-[#80bfff]/30 md:p-6 md:text-base"
+            className="relative z-10 h-full w-full resize-none bg-transparent p-5 text-[15px] leading-8 text-white/86 outline-none placeholder-white/26 selection:bg-[#80bfff]/30 md:p-6 md:text-base"
             spellCheck={false}
           />
         )}
       </div>
 
       <div className="soft-divider" />
-      <div className="px-5 py-3">
+      <div className="relative z-10 px-5 py-3">
         <StatsBar
           charCount={charCount}
           wordCount={wordCount}

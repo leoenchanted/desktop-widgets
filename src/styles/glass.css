@@ -289,6 +289,38 @@
   color: rgba(255, 255, 255, 0.92);
 }
 
+.pomodoro-settings-popover {
+  background:
+    linear-gradient(180deg, rgba(35, 48, 63, 0.96), rgba(13, 20, 29, 0.94)),
+    rgba(12, 18, 27, 0.96);
+  border: 1px solid rgba(210, 229, 255, 0.2);
+  border-radius: 18px;
+  box-shadow:
+    0 22px 46px rgba(0, 0, 0, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(22px) saturate(135%);
+  -webkit-backdrop-filter: blur(22px) saturate(135%);
+}
+
+.pomodoro-settings-option {
+  background: rgba(255, 255, 255, 0.105);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 13px;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    transform 160ms ease;
+}
+
+.pomodoro-settings-option:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(210, 229, 255, 0.26);
+}
+
+.pomodoro-settings-option:active {
+  transform: scale(0.99);
+}
+
 .workspace-grid {
   display: grid;
   grid-template-columns: minmax(230px, 280px) minmax(420px, 1fr) minmax(280px, 340px);

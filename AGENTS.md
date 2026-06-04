@@ -20,6 +20,7 @@
 - 动画：`framer-motion`。
 - 图标：`react-icons`。
 - Markdown：`marked` + 本地 HTML 清理函数。
+- WebGL 背景特效：Three.js，运行时优先 CDN 加载，保留本地依赖 fallback。
 - 浏览器数据库：IndexedDB，封装在 `src/data/localDb.js`。
 - 浏览器持久化：启动时通过 Storage Persistence API 申请持久化存储。
 - 后端：Express，仅作为本机旧数据迁移和兼容层。
@@ -87,6 +88,43 @@ npm run start
 - `EmptyState.jsx`
 
 新增 UI 时优先复用这些组件，不要到处写一套新的 `bg-white/10 border rounded`。
+
+## 全局背景特效规则
+
+全局 WebGL 背景特效是壁纸之上的环境层，不是编辑器局部特效。
+
+相关文件：
+
+- `src/components/workarea/WorkspaceFxLayer.jsx`
+- `src/components/WorkspaceFxControl.jsx`
+- `src/config/workspaceFxModes.js`
+- `src/store/useSettingsStore.js`
+- `src/styles/glass.css`
+
+交互规则：
+
+- 特效默认每次进入应用都必须是关闭状态，用户需要手动打开。
+- `workspaceFxEnabled` 只作为当前会话 UI 状态，不写入 IndexedDB，也不要写入 `localStorage`。
+- 可以持久化 `workspaceFxMode`，让用户下次手动开启时继续使用上次选择的特效模式。
+- 全局入口放在常驻可见工具区，当前为右下角特效按钮。
+- 点击特效按钮应打开设置面板，不要直接在按钮旁边放常驻下拉框。
+- 设置面板上方是开关按钮，下方才是特效模式选项。
+- 不要再把特效按钮放进 Markdown 编辑器工具栏，也不要默认启用编辑器内部特效。
+
+渲染层级规则：
+
+- 特效层必须覆盖整个页面背景，作用范围是全 viewport。
+- 特效层位于壁纸/背景遮罩之上，但必须低于 Header、组件区、工作区、弹窗、命令面板和全局工具按钮。
+- 特效 canvas 必须 `pointer-events: none`，不能影响拖拽、点击、编辑和快捷操作。
+- 不要把特效限制在 Markdown 编辑器、工作区某张卡片或单个组件内部。
+
+实现规则：
+
+- Three.js 运行时优先从 CDN 加载，线上可直接使用 CDN；同时保留 `import('three')` fallback，避免 CDN 失败时完全不可用。
+- 新增特效模式先更新 `src/config/workspaceFxModes.js`，再在 `WorkspaceFxLayer.jsx` 里补实现。
+- 关闭或切换特效时只做动画取消、资源 dispose 和 renderer clear；不要在正常开关流程里调用 `renderer.forceContextLoss()`，否则同一个 canvas 重新开启可能不渲染。
+- 需要按设备性能和 `prefers-reduced-motion` 降低粒子密度，并在页面隐藏时暂停渲染。
+- 特效不能成为核心日常功能依赖；CDN 失败时工作台本身必须照常可用。
 
 ## 更新日志规则
 
@@ -171,8 +209,13 @@ IndexedDB settings 字段：
 规则：
 
 - 默认时长保持 25 分钟。
-- 用户可以设置时长，允许范围 5-120 分钟。
+- 用户可以设置时长，允许范围 1-120 分钟。
 - 设置项保存到 IndexedDB `settings.pomodoroDuration`。
+- 结束提示音默认开启，设置项保存到 IndexedDB `settings.pomodoroSoundEnabled`。
+- 桌面通知默认关闭，只能由用户在番茄钟设置面板里手动开启；开启时请求浏览器 Notification 权限，设置项保存到 IndexedDB `settings.pomodoroNotificationEnabled`。
+- 番茄钟设置面板必须保证足够深的背景和文字对比度，复杂壁纸或全局特效开启时也要清楚可读。
+- 番茄钟设置面板打开后，点击面板外部区域应自动关闭；点击面板内部控件或设置按钮本身不能误关。
+- 番茄钟结束提醒必须只在一次真实完成事件后触发一次，不能因为 React 重渲染、页面恢复或跨天同步重复播放提示音/重复弹通知。
 - 运行中或暂停中的番茄钟状态保存到 IndexedDB `settings.pomodoroActiveSession`，用于 PWA 后台恢复和页面刷新恢复。
 - 运行中修改时长不强制重置当前倒计时；未运行时修改时长会重置当前显示时间。
 - 完成记录里的 `duration` 必须使用实际设置的时长，今日专注分钟数应按历史 session 的 duration 求和。

@@ -4,7 +4,7 @@ import { getSetting, setSetting } from '../data/localDb';
 import { today } from '../utils/date';
 
 const DEFAULT_DURATION = 25;
-const MIN_DURATION = 5;
+const MIN_DURATION = 1;
 const MAX_DURATION = 120;
 const ACTIVE_SESSION_KEY = 'pomodoroActiveSession';
 
@@ -44,6 +44,10 @@ export const usePomodoroStore = create((set, get) => ({
   remainingSeconds: durationToSeconds(DEFAULT_DURATION),
   isRunning: false,
   isCompleting: false,
+  completionGuardKey: null,
+  completionSignal: 0,
+  soundEnabled: true,
+  notificationEnabled: false,
   sessionCount: 0,
   focusMinutes: 0,
   currentDate: today(),
@@ -53,8 +57,22 @@ export const usePomodoroStore = create((set, get) => ({
   sessionDate: null,
 
   initializeDuration: async () => {
-    const duration = clampDuration(await getSetting('pomodoroDuration', DEFAULT_DURATION));
-    const activeSession = await getSetting(ACTIVE_SESSION_KEY, null);
+    const [
+      storedDuration,
+      activeSession,
+      soundEnabled,
+      notificationEnabled,
+    ] = await Promise.all([
+      getSetting('pomodoroDuration', DEFAULT_DURATION),
+      getSetting(ACTIVE_SESSION_KEY, null),
+      getSetting('pomodoroSoundEnabled', true),
+      getSetting('pomodoroNotificationEnabled', false),
+    ]);
+    const duration = clampDuration(storedDuration);
+    const settingsState = {
+      soundEnabled: soundEnabled !== false,
+      notificationEnabled: Boolean(notificationEnabled),
+    };
 
     if (activeSession?.status === 'running' && activeSession.endsAt) {
       const remainingSeconds = remainingFromEndsAt(activeSession.endsAt);
@@ -70,6 +88,7 @@ export const usePomodoroStore = create((set, get) => ({
         startedAt,
         endsAt: activeSession.endsAt,
         sessionDate,
+        ...settingsState,
       });
 
       get().ensureTicker();
@@ -92,6 +111,7 @@ export const usePomodoroStore = create((set, get) => ({
         startedAt: activeSession.startedAt || activeSession.started_at || null,
         endsAt: null,
         sessionDate: activeSession.date || today(),
+        ...settingsState,
       });
       return;
     }
@@ -104,7 +124,20 @@ export const usePomodoroStore = create((set, get) => ({
       startedAt: null,
       endsAt: null,
       sessionDate: null,
+      ...settingsState,
     });
+  },
+
+  setSoundEnabled: async (soundEnabled) => {
+    const enabled = Boolean(soundEnabled);
+    set({ soundEnabled: enabled });
+    await setSetting('pomodoroSoundEnabled', enabled);
+  },
+
+  setNotificationEnabled: async (notificationEnabled) => {
+    const enabled = Boolean(notificationEnabled);
+    set({ notificationEnabled: enabled });
+    await setSetting('pomodoroNotificationEnabled', enabled);
   },
 
   setDuration: async (value) => {
@@ -145,6 +178,7 @@ export const usePomodoroStore = create((set, get) => ({
     set({
       isRunning: true,
       isCompleting: false,
+      completionGuardKey: null,
       startedAt,
       endsAt,
       sessionDate,
@@ -190,6 +224,7 @@ export const usePomodoroStore = create((set, get) => ({
       ...splitSeconds(durationToSeconds(durationMinutes)),
       isRunning: false,
       isCompleting: false,
+      completionGuardKey: null,
       intervalId: null,
       startedAt: null,
       endsAt: null,
@@ -206,11 +241,13 @@ export const usePomodoroStore = create((set, get) => ({
       startedAt,
       endsAt,
       isCompleting,
+      completionGuardKey,
     } = get();
-    if (isCompleting) return;
-    if (intervalId) clearInterval(intervalId);
-    set({ intervalId: null, isCompleting: true, ...splitSeconds(0) });
     const recordDate = sessionDate || currentDate;
+    const guardKey = `${recordDate}:${startedAt || ''}:${endsAt || ''}:${durationMinutes}`;
+    if (isCompleting || completionGuardKey === guardKey) return;
+    if (intervalId) clearInterval(intervalId);
+    set({ intervalId: null, isCompleting: true, completionGuardKey: guardKey, ...splitSeconds(0) });
     const endedAt = endsAt && new Date(endsAt).getTime() <= Date.now()
       ? endsAt
       : new Date().toISOString();
@@ -229,12 +266,14 @@ export const usePomodoroStore = create((set, get) => ({
         sessionDate: null,
         sessionCount: recordDate === state.currentDate ? state.sessionCount + 1 : state.sessionCount,
         focusMinutes: recordDate === state.currentDate ? state.focusMinutes + durationMinutes : state.focusMinutes,
+        completionSignal: state.completionSignal + 1,
       }));
     } catch {
       set({
         ...splitSeconds(durationToSeconds(durationMinutes)),
         isRunning: false,
         isCompleting: false,
+        completionGuardKey: null,
         startedAt: null,
         endsAt: null,
         sessionDate: null,

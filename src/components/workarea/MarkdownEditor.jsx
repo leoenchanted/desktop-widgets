@@ -1,10 +1,11 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { FaBookmark, FaCheck, FaDownload, FaPenNib, FaTrashAlt, FaUndo } from 'react-icons/fa';
 import { useMarkdownStore } from '../../store/useMarkdownStore';
 import { useDebounce } from '../../hooks/useDebounce';
 import DatePickerPopover from './DatePickerPopover';
 import StatsBar from './StatsBar';
 import TabBar from './TabBar';
+import MarkdownSearchPanel from './MarkdownSearchPanel';
 import GlassPanel from '../ui/GlassPanel';
 import IconButton from '../ui/IconButton';
 import PanelHeader from '../ui/PanelHeader';
@@ -23,7 +24,6 @@ const MarkdownEditor = ({ todayKey }) => {
     activePageId,
     setContent,
     saveContent,
-    fetchContent,
     fetchDates,
     setCurrentDate,
     currentDate,
@@ -31,6 +31,7 @@ const MarkdownEditor = ({ todayKey }) => {
     removePage,
     switchPage,
     renamePage,
+    openPageAt,
   } = useMarkdownStore();
   const debouncedContent = useDebounce(content, 500);
   const [editorMode, setEditorMode] = useState('plain');
@@ -39,6 +40,7 @@ const MarkdownEditor = ({ todayKey }) => {
   const [contentBackup, setContentBackup] = useState({ pageId: activePageId, content: '' });
   const textareaRef = useRef(null);
   const hasEditedRef = useRef(false);
+  const pendingSearchJumpRef = useRef(null);
   const backupContent = contentBackup.pageId === activePageId ? contentBackup.content : '';
 
   useEffect(() => {
@@ -65,9 +67,8 @@ const MarkdownEditor = ({ todayKey }) => {
 
   useEffect(() => {
     hasEditedRef.current = false;
-    fetchContent(currentDate);
     fetchDates();
-  }, [currentDate, fetchContent, fetchDates]);
+  }, [currentDate, fetchDates]);
 
   useEffect(() => {
     if (!hasEditedRef.current || loading) return;
@@ -175,6 +176,63 @@ const MarkdownEditor = ({ todayKey }) => {
     }
   };
 
+  const handleBeforeDraftSearch = useCallback(async () => {
+    if (loading || !hasEditedRef.current) return;
+
+    setSaveState('saving');
+    try {
+      await saveContent();
+      hasEditedRef.current = false;
+      setSaveState('saved');
+    } catch (error) {
+      console.error('Failed to save markdown before searching', error);
+      setSaveState('error');
+      throw error;
+    }
+  }, [loading, saveContent]);
+
+  useEffect(() => {
+    if (loading || editorMode !== 'plain') return;
+    const jump = pendingSearchJumpRef.current;
+    const textarea = textareaRef.current;
+    if (!jump || !textarea) return;
+
+    requestAnimationFrame(() => {
+      const value = textarea.value || '';
+      const start = Math.min(jump.matchIndex, value.length);
+      const end = Math.min(start + jump.matchLength, value.length);
+      const lineHeight = Number.parseFloat(window.getComputedStyle(textarea).lineHeight) || 28;
+      const linesBeforeMatch = value.slice(0, start).split('\n').length - 1;
+
+      textarea.focus();
+      textarea.setSelectionRange(start, end);
+      textarea.scrollTop = Math.max(0, (linesBeforeMatch * lineHeight) - (textarea.clientHeight / 3));
+      pendingSearchJumpRef.current = null;
+    });
+  }, [activePageId, content, currentDate, editorMode, loading]);
+
+  const handleSearchResultSelect = async (result) => {
+    if (loading) return;
+
+    setSaveState('saving');
+    try {
+      if (hasEditedRef.current) await saveContent();
+      pendingSearchJumpRef.current = {
+        matchIndex: result.matchIndex,
+        matchLength: result.matchLength,
+      };
+      setEditorMode('plain');
+      await openPageAt(result.date, result.pageId);
+      hasEditedRef.current = false;
+      setClearedDraft(null);
+      setSaveState('saved');
+    } catch (error) {
+      console.error('Failed to open markdown search result', error);
+      pendingSearchJumpRef.current = null;
+      setSaveState('error');
+    }
+  };
+
   const status =
     saveState === 'saving'
       ? '保存中'
@@ -193,6 +251,11 @@ const MarkdownEditor = ({ todayKey }) => {
           icon={FaPenNib}
           action={
             <div className="flex flex-wrap items-center justify-end gap-2">
+              <MarkdownSearchPanel
+                disabled={loading}
+                onBeforeSearch={handleBeforeDraftSearch}
+                onSelectResult={handleSearchResultSelect}
+              />
               <IconButton
                 icon={FaDownload}
                 onClick={handleExportTxt}

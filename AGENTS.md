@@ -381,6 +381,16 @@ Markdown 相关文件：
 
 修改 Markdown 渲染时，不要绕过 `sanitizeHtml`。
 
+日记草稿搜索规则：
+
+- 搜索入口放在 `MarkdownEditor` 的日记草稿工具栏内，不做全局搜索入口。
+- 搜索范围覆盖 IndexedDB `markdown_entries` 中所有日期和页面。
+- 搜索结果必须显示日期、页面标题和相关片段，并高亮关键词。
+- 搜索结果浮层应通过 portal/fixed 渲染，避免被编辑器、工作区或其他 `overflow-hidden` 容器裁切。
+- 搜索浮层必须保证足够深的背景和文字对比度，复杂壁纸或全局特效开启时也要清楚可读。
+- 点击搜索结果前应先保存当前草稿，再跳转到目标日期和页面。
+- 第一版定位优先使用纯文本 textarea 的 selection 定位；Markdown/Vditor 模式可自动切到纯文本以保证定位准确。
+
 日记草稿导出规则：
 
 - `MarkdownEditor` 必须保留导出 TXT 入口。

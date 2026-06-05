@@ -37,6 +37,31 @@ export const useMarkdownStore = create((set, get) => ({
     }
   },
 
+  openPageAt: async (date = today(), pageId = null) => {
+    const key = date || today();
+    set({ currentDate: key, loading: true });
+    try {
+      const entry = await markdownApi.getByDate(key);
+      const targetPageId = pageId && entry.pages?.some((p) => p.id === pageId)
+        ? pageId
+        : entry.activePageId || entry.pages?.[0]?.id || null;
+      const page = entry.pages?.find((p) => p.id === targetPageId) || entry.pages?.[0];
+      const content = page?.content || '';
+      set({
+        content,
+        pages: entry.pages || [],
+        activePageId: targetPageId,
+        wordCount: content.trim() ? content.trim().split(/\s+/).length : 0,
+        charCount: content.length,
+        loading: false,
+      });
+      return { ...entry, activePageId: targetPageId, content };
+    } catch (error) {
+      set({ loading: false });
+      throw error;
+    }
+  },
+
   setContent: (content) => {
     const { pages, activePageId } = get();
     const wordCount = content.trim() ? content.trim().split(/\s+/).length : 0;

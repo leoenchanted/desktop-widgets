@@ -4,6 +4,9 @@ import { localDateKey, today } from '../utils/date';
 
 export const LEGACY_WORKSPACE_KEY = 'workspace';
 const now = () => new Date().toISOString();
+const SEARCH_RESULT_LIMIT = 50;
+const SEARCH_PAGE_RESULT_LIMIT = 5;
+const SEARCH_EXCERPT_RADIUS = 56;
 
 export function countMarkdownWords(content) {
   return content.trim() ? content.trim().split(/\s+/).length : 0;
@@ -61,6 +64,37 @@ function normalizeEntry(entry, date) {
     content,
     word_count: countMarkdownWords(content),
     char_count: content.length,
+  };
+}
+
+function buildSearchExcerpt(content, matchIndex, matchLength) {
+  const preferredBreaks = new Set(['\n', '。', '！', '？', '.', '!', '?', ';', '；']);
+  let start = matchIndex;
+  let end = matchIndex + matchLength;
+
+  while (start > 0 && matchIndex - start < SEARCH_EXCERPT_RADIUS) {
+    if (preferredBreaks.has(content[start - 1])) break;
+    start -= 1;
+  }
+
+  while (end < content.length && end - matchIndex < SEARCH_EXCERPT_RADIUS) {
+    if (preferredBreaks.has(content[end])) {
+      end += content[end] === '\n' ? 0 : 1;
+      break;
+    }
+    end += 1;
+  }
+
+  const hasPrefix = start > 0;
+  const hasSuffix = end < content.length;
+  const excerpt = content
+    .slice(start, end)
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  return {
+    excerpt: `${hasPrefix ? '...' : ''}${excerpt}${hasSuffix ? '...' : ''}`,
+    excerptStart: start,
   };
 }
 
@@ -149,5 +183,49 @@ export const markdownApi = {
       .filter((entry) => entry.pages?.some((p) => p.content?.trim()))
       .map((entry) => entry.date)
       .sort((a, b) => b.localeCompare(a));
+  },
+
+  searchDrafts: async (query) => {
+    const keyword = query.trim();
+    if (!keyword) return [];
+
+    const needle = keyword.toLocaleLowerCase();
+    const entries = await getDatedEntries();
+    const results = [];
+
+    for (const entry of entries.sort((a, b) => b.date.localeCompare(a.date))) {
+      for (const page of entry.pages || []) {
+        const content = page.content || '';
+        if (!content.trim()) continue;
+
+        const haystack = content.toLocaleLowerCase();
+        let fromIndex = 0;
+        let pageMatches = 0;
+
+        while (results.length < SEARCH_RESULT_LIMIT && pageMatches < SEARCH_PAGE_RESULT_LIMIT) {
+          const matchIndex = haystack.indexOf(needle, fromIndex);
+          if (matchIndex === -1) break;
+
+          const { excerpt, excerptStart } = buildSearchExcerpt(content, matchIndex, keyword.length);
+          results.push({
+            id: `${entry.date}:${page.id}:${matchIndex}`,
+            date: entry.date,
+            pageId: page.id,
+            pageTitle: page.title || '草稿',
+            excerpt,
+            excerptStart,
+            matchIndex,
+            matchLength: keyword.length,
+          });
+
+          pageMatches += 1;
+          fromIndex = matchIndex + Math.max(keyword.length, 1);
+        }
+
+        if (results.length >= SEARCH_RESULT_LIMIT) return results;
+      }
+    }
+
+    return results;
   },
 };

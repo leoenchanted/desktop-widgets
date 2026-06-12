@@ -6,6 +6,7 @@ import DatePickerPopover from './DatePickerPopover';
 import StatsBar from './StatsBar';
 import TabBar from './TabBar';
 import MarkdownSearchPanel from './MarkdownSearchPanel';
+import GlowingTextarea from './GlowingTextarea';
 import GlassPanel from '../ui/GlassPanel';
 import IconButton from '../ui/IconButton';
 import PanelHeader from '../ui/PanelHeader';
@@ -338,7 +339,7 @@ const MarkdownEditor = ({ todayKey }) => {
             className="relative z-10 h-full w-full"
           />
         ) : (
-          <textarea
+          <GlowingTextarea
             ref={textareaRef}
             value={content || backupContent}
             onChange={handleTextareaChange}

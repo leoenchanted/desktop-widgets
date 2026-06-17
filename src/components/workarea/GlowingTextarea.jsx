@@ -43,6 +43,8 @@ const GlowingTextarea = forwardRef(({
   onKeyUp,
   onScroll,
   onSelect,
+  glowEnabled = true,
+  glowIntensity = 1,
   value,
   ...props
 }, forwardedRef) => {
@@ -61,7 +63,7 @@ const GlowingTextarea = forwardRef(({
     const textarea = textareaRef.current;
     const mirror = mirrorRef.current;
 
-    if (!textarea || !mirror || document.activeElement !== textarea) {
+    if (!glowEnabled || !textarea || !mirror || document.activeElement !== textarea) {
       setCaret((current) => (current.visible ? { ...current, visible: false } : current));
       return;
     }
@@ -106,7 +108,7 @@ const GlowingTextarea = forwardRef(({
       height: lineHeight,
       visible: isInView,
     });
-  }, []);
+  }, [glowEnabled]);
 
   const scheduleCaretUpdate = useCallback(() => {
     if (frameRef.current) cancelAnimationFrame(frameRef.current);
@@ -205,7 +207,8 @@ const GlowingTextarea = forwardRef(({
 
   return (
     <div
-      className={`glowing-textarea-shell ${focused ? 'is-focused' : ''} ${typing ? 'is-typing' : ''}`}
+      className={`glowing-textarea-shell ${glowEnabled ? 'glow-enabled' : ''} ${focused ? 'is-focused' : ''} ${typing ? 'is-typing' : ''}`}
+      style={{ '--editor-caret-glow': glowIntensity }}
     >
       <textarea
         ref={textareaRef}
@@ -228,15 +231,17 @@ const GlowingTextarea = forwardRef(({
         className="glowing-textarea-measure"
         aria-hidden="true"
       />
-      <span
-        className={`glowing-editor-caret ${caret.visible ? 'is-visible' : ''}`}
-        style={{
-          height: `${caret.height}px`,
-          left: `${caret.left}px`,
-          top: `${caret.top}px`,
-        }}
-        aria-hidden="true"
-      />
+      {glowEnabled && (
+        <span
+          className={`glowing-editor-caret ${caret.visible ? 'is-visible' : ''}`}
+          style={{
+            height: `${caret.height}px`,
+            left: `${caret.left}px`,
+            top: `${caret.top}px`,
+          }}
+          aria-hidden="true"
+        />
+      )}
     </div>
   );
 });

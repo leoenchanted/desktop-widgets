@@ -1,11 +1,13 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { FaBookmark, FaCheck, FaDownload, FaPenNib, FaTrashAlt, FaUndo } from 'react-icons/fa';
 import { useMarkdownStore } from '../../store/useMarkdownStore';
+import { useSettingsStore } from '../../store/useSettingsStore';
 import { useDebounce } from '../../hooks/useDebounce';
 import DatePickerPopover from './DatePickerPopover';
 import StatsBar from './StatsBar';
 import TabBar from './TabBar';
 import MarkdownSearchPanel from './MarkdownSearchPanel';
+import MarkdownEditorSettingsPanel from './MarkdownEditorSettingsPanel';
 import GlowingTextarea from './GlowingTextarea';
 import GlassPanel from '../ui/GlassPanel';
 import IconButton from '../ui/IconButton';
@@ -34,6 +36,12 @@ const MarkdownEditor = ({ todayKey }) => {
     renamePage,
     openPageAt,
   } = useMarkdownStore();
+  const {
+    editorGlowCaretEnabled,
+    editorCaretGlowIntensity,
+    setEditorGlowCaretEnabled,
+    setEditorCaretGlowIntensity,
+  } = useSettingsStore();
   const debouncedContent = useDebounce(content, 500);
   const [editorMode, setEditorMode] = useState('plain');
   const [saveState, setSaveState] = useState('idle');
@@ -120,7 +128,7 @@ const MarkdownEditor = ({ todayKey }) => {
     setSaveState('saving');
     try {
       if (hasEditedRef.current) await saveContent();
-      const blob = new Blob(['﻿', content], { type: 'text/plain;charset=utf-8' });
+      const blob = new Blob(['\ufeff', content], { type: 'text/plain;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -257,6 +265,13 @@ const MarkdownEditor = ({ todayKey }) => {
                 onBeforeSearch={handleBeforeDraftSearch}
                 onSelectResult={handleSearchResultSelect}
               />
+              <MarkdownEditorSettingsPanel
+                disabled={loading}
+                glowCaretEnabled={editorGlowCaretEnabled}
+                glowIntensity={editorCaretGlowIntensity}
+                onGlowCaretEnabledChange={setEditorGlowCaretEnabled}
+                onGlowIntensityChange={setEditorCaretGlowIntensity}
+              />
               <IconButton
                 icon={FaDownload}
                 onClick={handleExportTxt}
@@ -289,7 +304,6 @@ const MarkdownEditor = ({ todayKey }) => {
                 value={editorMode}
                 onChange={(newMode) => {
                   if (newMode === 'markdown' && editorMode === 'plain') {
-                    // Restore backup content when entering Markdown mode
                     if (backupContent && !content) {
                       setContent(backupContent);
                     }
@@ -336,6 +350,8 @@ const MarkdownEditor = ({ todayKey }) => {
           <VditorWrapper
             content={content}
             onContentChange={handleChange}
+            glowCaretEnabled={editorGlowCaretEnabled}
+            glowIntensity={editorCaretGlowIntensity}
             className="relative z-10 h-full w-full"
           />
         ) : (
@@ -344,6 +360,8 @@ const MarkdownEditor = ({ todayKey }) => {
             value={content || backupContent}
             onChange={handleTextareaChange}
             onKeyDown={handleTextareaKeyDown}
+            glowEnabled={editorGlowCaretEnabled}
+            glowIntensity={editorCaretGlowIntensity}
             placeholder="写下你的记录..."
             className="relative z-10 h-full w-full resize-none bg-transparent p-5 text-[15px] leading-8 text-white/86 outline-none placeholder-white/26 selection:bg-[#80bfff]/30 md:p-6 md:text-base"
             spellCheck={false}

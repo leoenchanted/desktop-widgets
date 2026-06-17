@@ -326,6 +326,7 @@ Todo 每日重复（图钉置顶）规则：
 Markdown 相关文件：
 
 - `src/components/workarea/MarkdownEditor.jsx`
+- `src/components/workarea/MarkdownEditorSettingsPanel.jsx`
 - `src/components/workarea/GlowingTextarea.jsx`
 - `src/components/workarea/VditorWrapper.jsx`
 - `src/components/workarea/MarkdownPreview.jsx`
@@ -385,10 +386,14 @@ Markdown 相关文件：
 日记草稿发光光标规则：
 
 - 纯文本模式必须保留自定义发光光标，不能退回普通浏览器默认光标；发光效果应明显但延续蓝绿玻璃工作台风格。
+- 日记草稿工具栏必须保留文本编辑器设置入口，后续字体、行高、密度等编辑器偏好应继续放进该设置面板，不要分散到全局设置或其他浮层。
+- 编辑器设置面板必须通过 portal/fixed 渲染，背景要足够深、文字对比度要足够高，不能被编辑器或工作区的 `overflow-hidden` 裁切。
+- 发光光标必须允许用户自行开关，并支持亮度调节；设置项保存到 IndexedDB `settings.editorGlowCaretEnabled` 和 `settings.editorCaretGlowIntensity`，不要写入 `localStorage`。
 - `GlowingTextarea` 仍以原生 textarea 作为真实输入层，必须保留 `ref`、`selectionStart/selectionEnd`、`setSelectionRange()` 和滚动能力，避免破坏搜索跳转、Tab 缩进、中文输入法和移动端输入。
 - 发光光标定位必须支持多行、自动折行、滚动、点击、方向键移动和搜索结果跳转；选中文本时可以隐藏自定义光标，避免遮挡选区。
 - 打字时光标保持常亮，停顿后再恢复闪烁；需要尊重 `prefers-reduced-motion`，降低或关闭光标动画。
-- Markdown/Vditor 模式优先使用稳定的 `caret-color` 和轻微焦点光感，不要轻易用 overlay 接管 Vditor 的 contenteditable 光标，避免和 WYSIWYG 渲染及输入法冲突。
+- Markdown/Vditor 模式也必须支持发光光标；当前通过 Selection/Range 坐标在 Vditor 容器上叠加光标层，不直接改写 Vditor 内部 markdown 内容或插入持久 DOM。
+- 关闭发光光标时，纯文本和 Markdown/Vditor 模式都必须恢复浏览器默认输入光标，避免不喜欢发光效果的用户无法关闭。
 
 日记草稿搜索规则：
 

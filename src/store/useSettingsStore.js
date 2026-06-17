@@ -39,6 +39,8 @@ export const useSettingsStore = create((set, get) => ({
   storageEstimate: null,
   workspaceFxEnabled: false,
   workspaceFxMode: DEFAULT_WORKSPACE_FX_MODE,
+  editorGlowCaretEnabled: true,
+  editorCaretGlowIntensity: 1,
 
   initializeSettings: async () => {
     if (get().initialized) return;
@@ -51,6 +53,8 @@ export const useSettingsStore = create((set, get) => ({
       storedWallpaperAssetId,
       persistentRequested,
       storedWorkspaceFxMode,
+      storedEditorGlowCaretEnabled,
+      storedEditorCaretGlowIntensity,
     ] = await Promise.all([
       getSetting('bg'),
       getSetting('username'),
@@ -59,6 +63,8 @@ export const useSettingsStore = create((set, get) => ({
       getSetting('wallpaperAssetId'),
       getSetting('persistentStorageRequested', false),
       getSetting('workspaceFxMode', DEFAULT_WORKSPACE_FX_MODE),
+      getSetting('editorGlowCaretEnabled', true),
+      getSetting('editorCaretGlowIntensity', 1),
     ]);
 
     let bg = storedBg || legacyValue('glass_bg') || DEFAULT_BG;
@@ -87,6 +93,10 @@ export const useSettingsStore = create((set, get) => ({
     const workspaceFxMode = WORKSPACE_FX_MODE_VALUES.has(storedWorkspaceFxMode)
       ? storedWorkspaceFxMode
       : DEFAULT_WORKSPACE_FX_MODE;
+    const editorCaretGlowIntensity = Math.min(
+      1.8,
+      Math.max(0.35, Number(storedEditorCaretGlowIntensity) || 1),
+    );
 
     set({
       bg,
@@ -97,6 +107,8 @@ export const useSettingsStore = create((set, get) => ({
       storageEstimate,
       workspaceFxEnabled: false,
       workspaceFxMode,
+      editorGlowCaretEnabled: storedEditorGlowCaretEnabled !== false,
+      editorCaretGlowIntensity,
       initialized: true,
     });
   },
@@ -139,6 +151,17 @@ export const useSettingsStore = create((set, get) => ({
     if (!WORKSPACE_FX_MODE_VALUES.has(workspaceFxMode)) return;
     set({ workspaceFxMode });
     persistSetting('workspaceFxMode', workspaceFxMode);
+  },
+
+  setEditorGlowCaretEnabled: (editorGlowCaretEnabled) => {
+    set({ editorGlowCaretEnabled });
+    persistSetting('editorGlowCaretEnabled', editorGlowCaretEnabled);
+  },
+
+  setEditorCaretGlowIntensity: (editorCaretGlowIntensity) => {
+    const nextValue = Math.min(1.8, Math.max(0.35, Number(editorCaretGlowIntensity) || 1));
+    set({ editorCaretGlowIntensity: nextValue });
+    persistSetting('editorCaretGlowIntensity', nextValue);
   },
 
   toggleEditMode: () => set((state) => ({ isEditMode: !state.isEditMode })),

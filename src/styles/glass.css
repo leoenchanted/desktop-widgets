@@ -482,10 +482,10 @@
   border-radius: 999px;
   box-shadow:
     0 0 4px 1px rgba(255, 255, 255, 0.95),
-    0 0 12px 3px rgba(154, 233, 189, 0.88),
-    0 0 28px 7px rgba(109, 175, 255, 0.72),
-    0 0 54px 13px rgba(128, 191, 255, 0.36);
-  filter: saturate(1.2) brightness(var(--editor-caret-glow, 1));
+    0 0 calc(10px * var(--editor-caret-glow, 1)) calc(2px * var(--editor-caret-glow, 1)) rgb(154 233 189 / clamp(0.22, calc(0.7 * var(--editor-caret-glow, 1)), 0.9)),
+    0 0 calc(24px * var(--editor-caret-glow, 1)) calc(5px * var(--editor-caret-glow, 1)) rgb(109 175 255 / clamp(0.18, calc(0.54 * var(--editor-caret-glow, 1)), 0.76)),
+    0 0 calc(48px * var(--editor-caret-glow, 1)) calc(10px * var(--editor-caret-glow, 1)) rgb(128 191 255 / clamp(0.1, calc(0.28 * var(--editor-caret-glow, 1)), 0.42));
+  filter: saturate(1.2);
   opacity: 0;
   pointer-events: none;
   position: absolute;
@@ -501,7 +501,7 @@
 .glowing-editor-caret::before {
   background: rgba(255, 255, 255, 0.92);
   border-radius: inherit;
-  box-shadow: 0 0 9px rgba(255, 255, 255, 0.95);
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.95);
   content: "";
   inset: 0;
   position: absolute;
@@ -533,7 +533,7 @@
   }
 
   50% {
-    opacity: 0.18;
+    opacity: 0;
   }
 }
 

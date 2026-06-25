@@ -254,6 +254,7 @@ IndexedDB settings 字段：
 - Markdown：`src/api/markdownApi.js`
 - 每日回顾：`src/api/reviewApi.js`
 - 番茄钟：`src/api/pomodoroApi.js`
+- 活动统计：`src/api/activityApi.js`
 - 备份导入：`src/api/backupApi.js`
 - 壁纸/图片资产：`src/api/wallpaperApi.js`
 
@@ -310,6 +311,21 @@ new Date().toISOString().slice(0, 10)
 - TodoList 的任务列表层必须脱离普通文档流：外层 `todo-list-panel` 相对定位，头部 `todo-list-header` 固定高度，任务滚动层 `todo-list-scroll` 绝对定位到底部，防止任务项参与卡片高度计算。
 - Todo 日期选择器需要保留可见弹层；日期弹层应通过 portal/fixed 浮在 body 上，不要依赖卡片外层 `overflow-visible`。
 - 窄屏和移动端不能只靠 grid 行高继承；`workspace-fixed-panel` 自身也必须设置固定高度和 `max-height`，防止内容反推卡片高度。
+
+活动热力图与月度总结规则：
+
+- 活动热力图组件在 `src/components/workarea/ActivityHeatmap.jsx`，日度统计 API 在 `src/api/activityApi.js`。
+- 活动热力图是跨日期统计视图，不属于单日日记编辑器内部功能；当前放在左侧工作区侧栏，接替原“今日回顾”位置，和番茄钟同级。
+- 第一版统计直接读取现有 IndexedDB stores，不新增 object store：`markdown_entries`、`todos`、`pomodoro_sessions`、`daily_reviews`。
+- 每日活动数据必须统一输出日期、score、level、日记活动字数/字符数、Todo 完成数/总数、番茄钟专注分钟、每日回顾状态，后续月度总结必须优先复用该结构。
+- score 只用于热力图颜色深浅和趋势概览，不应覆盖或修改原始业务数据；日记记录强度必须使用统一活动字数统计，中文按字、英文和数字按词组，忽略空白和标点，不要混用原始 `content.length` 字符长度。
+- 热力图详情区已有当天拆分进度条时，不要再叠加重复的累计字数、任务、专注三格指标。
+- 点击热力图日期只更新热力图下方的当天详情，不应直接切换整个工作区日期；详情区必须提供明确的“跳到这一天”按钮，由用户确认后再切换日记、Todo、番茄钟统计等工作区日期。
+- 热力图默认打开后应滚动到今天所在视角附近，避免用户每次手动横向滚动才能看到当前日期。
+- 热力图颜色使用绿色系整块填充，越深表示当天记录/活动越多；不要使用蓝紫渐变或只靠透明度淡化来表示强度。
+- 热力图格子必须使用稳定尺寸和内部滚动，不能撑高 `workspace-grid` 或侧栏；详情区要保证深色背景和足够文字对比度。
+- 在热力图或其他高频实时统计组件里使用 Zustand store 时，selector 不要直接返回新的对象字面量或新数组；应分别订阅稳定字段，再用 `useMemo`/组件内部逻辑合并，避免 React/Zustand 循环渲染导致首页空白。
+- 后续月度总结应基于 `activityApi.getMonthlySummary(year, month)` 或同等 API 汇总，不要在 UI 组件里重新散写一套统计逻辑。
 
 Todo 每日重复（图钉置顶）规则：
 

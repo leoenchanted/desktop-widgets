@@ -1,17 +1,22 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { FaCalendarDay, FaDatabase, FaLayerGroup } from 'react-icons/fa';
 import TodoList from './TodoList';
 import MarkdownEditor from './MarkdownEditor';
 import PomodoroTimer from './PomodoroTimer';
-import DailyReview from './DailyReview';
 import PinnedNote from './PinnedNote';
+import ActivityHeatmap from './ActivityHeatmap';
 import GlassPanel from '../ui/GlassPanel';
 import StatusPill from '../ui/StatusPill';
 import { useTodayKey } from '../../hooks/useTodayKey';
 import { formatDate } from '../../utils/date';
 
 const WorkArea = () => {
-  const date = useTodayKey();
+  const todayKey = useTodayKey();
+  const [selectedDate, setSelectedDate] = useState(todayKey);
+
+  useEffect(() => {
+    setSelectedDate(todayKey);
+  }, [todayKey]);
 
   return (
     <div className="mx-auto flex w-full max-w-[1640px] flex-col gap-4 pb-8 md:min-h-[calc(100vh-230px)]">
@@ -30,7 +35,7 @@ const WorkArea = () => {
           <div className="flex flex-wrap items-center gap-2 pb-1">
             <StatusPill variant="accent">
               <FaCalendarDay className="mr-1.5" size={11} />
-              {formatDate(date)}
+              {formatDate(selectedDate)}
             </StatusPill>
             <StatusPill>
               <FaDatabase className="mr-1.5" size={10} />
@@ -42,16 +47,20 @@ const WorkArea = () => {
 
       <div className="workspace-grid flex-1">
         <aside className="workspace-stack">
-          <PomodoroTimer todayKey={date} />
-          <DailyReview todayKey={date} />
+          <PomodoroTimer todayKey={selectedDate} />
+          <ActivityHeatmap
+            todayKey={todayKey}
+            selectedDate={selectedDate}
+            onDateSelect={setSelectedDate}
+          />
         </aside>
 
         <main className="h-[min(72svh,680px)] min-h-[520px] min-w-0 md:h-[clamp(620px,calc(100svh-260px),780px)] md:min-h-0">
-          <MarkdownEditor todayKey={date} />
+          <MarkdownEditor todayKey={selectedDate} />
         </main>
 
         <aside className="workspace-stack">
-          <TodoList todayKey={date} />
+          <TodoList todayKey={selectedDate} />
           <PinnedNote />
         </aside>
       </div>

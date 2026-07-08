@@ -1,12 +1,81 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { AnimatePresence } from 'framer-motion';
-import { FaPlus, FaTasks } from 'react-icons/fa';
+import { FaCalendarTimes, FaPlus, FaSyncAlt, FaTasks, FaTrash } from 'react-icons/fa';
 import { useTodoStore } from '../../store/useTodoStore';
 import TodoItem from './TodoItem';
 import DatePickerPopover from './DatePickerPopover';
 import GlassPanel from '../ui/GlassPanel';
 import PanelHeader from '../ui/PanelHeader';
 import EmptyState from '../ui/EmptyState';
+
+function isRepeatingTodo(todo) {
+  return Boolean(todo?.pinGroupId && (todo.repeat === 'daily' || todo.pinned));
+}
+
+const RepeatDeleteDialog = ({ todo, onClose, onDeleteSingle, onDeleteFuture }) => {
+  if (!todo) return null;
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[10000] flex items-center justify-center px-4 py-6"
+      role="dialog"
+      aria-modal="true"
+      onClick={onClose}
+    >
+      <div className="absolute inset-0 bg-black/55 backdrop-blur-xl" />
+      <div
+        className="relative w-full max-w-[390px] rounded-[24px] border border-white/14 bg-[#07111d]/95 p-5 text-white shadow-[0_24px_80px_rgba(0,0,0,0.55)]"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="mb-4 flex items-start gap-3">
+          <span className="mt-0.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-2xl bg-[#ffb3b3]/12 text-[#ffc7c7]">
+            <FaCalendarTimes size={15} />
+          </span>
+          <div className="min-w-0">
+            <h3 className="text-sm font-semibold text-white/92">删除每日重复日程</h3>
+            <p className="mt-1 line-clamp-2 text-xs leading-5 text-white/52">{todo.text}</p>
+          </div>
+        </div>
+
+        <div className="grid gap-2">
+          <button
+            type="button"
+            onClick={onDeleteSingle}
+            className="flex min-h-12 items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.06] px-3 text-left transition hover:border-white/18 hover:bg-white/[0.09]"
+          >
+            <FaTrash size={12} className="text-white/52" />
+            <span className="min-w-0">
+              <strong className="block text-sm text-white/86">删除此日程</strong>
+              <small className="block text-xs leading-5 text-white/42">只删除 {todo.date} 这一天，之后仍会继续每日重复。</small>
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={onDeleteFuture}
+            className="flex min-h-12 items-center gap-3 rounded-2xl border border-[#ffb3b3]/18 bg-[#ffb3b3]/10 px-3 text-left transition hover:border-[#ffb3b3]/30 hover:bg-[#ffb3b3]/14"
+          >
+            <FaCalendarTimes size={12} className="text-[#ffc7c7]" />
+            <span className="min-w-0">
+              <strong className="block text-sm text-[#ffe1e1]">删除今天及未来所有日程</strong>
+              <small className="block text-xs leading-5 text-[#ffd0d0]/58">删除当前日期和未来同组日程，过去记录保留。</small>
+            </span>
+          </button>
+        </div>
+
+        <button
+          type="button"
+          onClick={onClose}
+          className="mt-4 h-10 w-full rounded-2xl border border-white/10 bg-white/[0.05] text-sm font-semibold text-white/62 transition hover:bg-white/[0.08] hover:text-white/82"
+        >
+          取消
+        </button>
+      </div>
+    </div>,
+    document.body,
+  );
+};
 
 const TodoList = ({ todayKey }) => {
   const {
@@ -16,8 +85,8 @@ const TodoList = ({ todayKey }) => {
     datesWithData,
     setCurrentDate,
     addTodo,
+    addRepeatingTodo,
     toggleTodo,
-    togglePin,
     deleteTodo,
     updateTodo,
     fetchDates,
@@ -25,6 +94,7 @@ const TodoList = ({ todayKey }) => {
   } = useTodoStore();
 
   const [newText, setNewText] = useState('');
+  const [pendingDeleteTodo, setPendingDeleteTodo] = useState(null);
 
   useEffect(() => {
     setCurrentDate(todayKey);
@@ -40,16 +110,47 @@ const TodoList = ({ todayKey }) => {
     [items],
   );
   const progress = items.length ? Math.round((completedCount / items.length) * 100) : 0;
+  const trimmedNewText = newText.trim();
 
   const handleAdd = async () => {
-    if (!newText.trim()) return;
-    await addTodo(newText.trim());
+    if (!trimmedNewText) return;
+    await addTodo(trimmedNewText);
     setNewText('');
     fetchDates();
   };
 
+  const handleAddRepeating = async () => {
+    if (!trimmedNewText) return;
+    await addRepeatingTodo(trimmedNewText);
+    setNewText('');
+  };
+
   const handleDateChange = async (date) => {
     await setCurrentDate(date);
+  };
+
+  const handleDeleteRequest = async (id) => {
+    const todo = items.find((item) => item.id === id);
+    if (!todo) return;
+
+    if (isRepeatingTodo(todo)) {
+      setPendingDeleteTodo(todo);
+      return;
+    }
+
+    await deleteTodo(id, 'single');
+  };
+
+  const handleDeleteSingle = async () => {
+    if (!pendingDeleteTodo) return;
+    await deleteTodo(pendingDeleteTodo.id, 'single');
+    setPendingDeleteTodo(null);
+  };
+
+  const handleDeleteFuture = async () => {
+    if (!pendingDeleteTodo) return;
+    await deleteTodo(pendingDeleteTodo.id, 'future');
+    setPendingDeleteTodo(null);
   };
 
   return (
@@ -84,20 +185,30 @@ const TodoList = ({ todayKey }) => {
         <div className="mt-4 flex gap-2">
           <input
             value={newText}
-            onChange={(e) => setNewText(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') handleAdd();
+            onChange={(event) => setNewText(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') handleAdd();
             }}
             placeholder="添加一个任务"
             className="min-w-0 flex-1 rounded-2xl border border-white/12 bg-white/8 px-3 py-2 text-sm text-white/82 outline-none placeholder-white/28 transition-all focus:border-[#9cc9ff]/40 focus:bg-white/12 focus:ring-1 focus:ring-[#9cc9ff]/18"
           />
           <button
+            type="button"
             onClick={handleAdd}
-            disabled={!newText.trim()}
-            className="glass-control flex h-10 w-10 items-center justify-center text-white/70 disabled:opacity-35"
+            disabled={!trimmedNewText}
+            className="glass-control flex h-10 w-10 flex-shrink-0 items-center justify-center text-white/70 disabled:opacity-35"
             title="添加任务"
           >
             <FaPlus size={12} />
+          </button>
+          <button
+            type="button"
+            onClick={handleAddRepeating}
+            disabled={!trimmedNewText}
+            className="glass-control flex h-10 w-10 flex-shrink-0 items-center justify-center text-[#bcdcff] disabled:opacity-35"
+            title="添加每日重复任务"
+          >
+            <FaSyncAlt size={12} />
           </button>
         </div>
       </div>
@@ -119,8 +230,7 @@ const TodoList = ({ todayKey }) => {
                   key={todo.id}
                   todo={todo}
                   onToggle={toggleTodo}
-                  onTogglePin={togglePin}
-                  onDelete={deleteTodo}
+                  onDelete={handleDeleteRequest}
                   onUpdate={updateTodo}
                 />
               ))}
@@ -128,6 +238,13 @@ const TodoList = ({ todayKey }) => {
           </div>
         )}
       </div>
+
+      <RepeatDeleteDialog
+        todo={pendingDeleteTodo}
+        onClose={() => setPendingDeleteTodo(null)}
+        onDeleteSingle={handleDeleteSingle}
+        onDeleteFuture={handleDeleteFuture}
+      />
     </GlassPanel>
   );
 };

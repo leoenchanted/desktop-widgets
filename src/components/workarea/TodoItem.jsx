@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { FaCheck, FaThumbtack, FaTrash } from 'react-icons/fa';
+import { FaCheck, FaSyncAlt, FaTrash } from 'react-icons/fa';
 
-const TodoItem = ({ todo, onToggle, onDelete, onUpdate, onTogglePin }) => {
+const TodoItem = ({ todo, onToggle, onDelete, onUpdate }) => {
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState(todo.text);
   const completed = Boolean(todo.completed);
+  const repeating = Boolean(todo.pinGroupId && (todo.repeat === 'daily' || todo.pinned));
 
   const handleSave = () => {
     const nextText = text.trim();
@@ -42,11 +43,11 @@ const TodoItem = ({ todo, onToggle, onDelete, onUpdate, onTogglePin }) => {
         <input
           autoFocus
           value={text}
-          onChange={(e) => setText(e.target.value)}
+          onChange={(event) => setText(event.target.value)}
           onBlur={handleSave}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') handleSave();
-            if (e.key === 'Escape') {
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') handleSave();
+            if (event.key === 'Escape') {
               setText(todo.text);
               setEditing(false);
             }
@@ -64,18 +65,14 @@ const TodoItem = ({ todo, onToggle, onDelete, onUpdate, onTogglePin }) => {
         </button>
       )}
 
-      {onTogglePin && (
-        <button
-          onClick={() => onTogglePin(todo.id)}
-          className={`rounded-lg p-1.5 transition-all duration-200 hover:bg-white/8 ${
-            todo.pinned
-              ? 'text-[#9cc9ff] opacity-100'
-              : 'text-white/0 hover:text-white/30 group-hover:text-white/20'
-          }`}
-          title={todo.pinned ? '取消每日重复' : '每日重复'}
+      {repeating && (
+        <span
+          className="flex h-6 flex-shrink-0 items-center gap-1 rounded-lg bg-[#9cc9ff]/10 px-1.5 text-[10px] font-semibold text-[#bcdcff]"
+          title="每日重复日程"
         >
-          <FaThumbtack size={10} className={todo.pinned ? 'rotate-45' : ''} />
-        </button>
+          <FaSyncAlt size={8} />
+          每日
+        </span>
       )}
 
       <button

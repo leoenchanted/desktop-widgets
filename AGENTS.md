@@ -327,16 +327,18 @@ new Date().toISOString().slice(0, 10)
 - 在热力图或其他高频实时统计组件里使用 Zustand store 时，selector 不要直接返回新的对象字面量或新数组；应分别订阅稳定字段，再用 `useMemo`/组件内部逻辑合并，避免 React/Zustand 循环渲染导致首页空白。
 - 后续月度总结应基于 `activityApi.getMonthlySummary(year, month)` 或同等 API 汇总，不要在 UI 组件里重新散写一套统计逻辑。
 
-Todo 每日重复（图钉置顶）规则：
+Todo 每日重复规则：
 
-- 每条 todo 支持 `pinned: boolean` 和 `pinGroupId: string` 字段。
-- 点击图钉按钮 → 生成新 `pinGroupId`（uuid），设置 `pinned: true`，同时 `sort_order: 0`，其他 todo 下移，置顶项自动移到列表最前面（带 framer-motion 动画）。
-- 取消置顶 → 当前日期取消置顶；**未来日期**的同 `pinGroupId` 实例直接删除；**过去日期**的实例保留记录但取消置顶，不再继续克隆。
-- `todoApi.clonePinnedForDate(date)` 在 `fetchTodos` 加载目标日期时调用。
-- 克隆逻辑：扫描所有 `pinned: true` 的记录 → 按 `pinGroupId` 去重保留最新 → 只从比目标日期更早的源克隆（`source.date < date`）→ 检查目标日期是否已有同组 ID → 没有则克隆（`completed: 0`）。
-- 克隆是延迟策略：不预生成数据，只在加载日期时检测补充。修改已置顶 todo 的文字后，后续克隆会使用新文字。
+- 每日重复日程的创建入口在 TodoList 输入区：`+` 只添加普通任务，旁边的循环按钮用于“添加每日重复任务”。不要再把单条 TodoItem 上的图钉作为创建/取消重复的主要入口。
+- 每条重复 todo 支持 `pinned: boolean`、`pinGroupId: string`、`repeat: 'daily' | null`、`repeatStoppedAt: string | null` 和 `deleted: 0 | 1` 字段；旧数据中 `pinned: true + pinGroupId` 必须继续按每日重复兼容，不能因为入口调整丢失用户以前置顶过的任务。
+- 点击输入区循环按钮创建每日重复 → 生成 `pinGroupId`，设置 `pinned: true`、`repeat: 'daily'`、`repeatStoppedAt: null`，同时 `sort_order: 0`，其他 todo 下移，重复项自动移到列表最前面（带 framer-motion 动画）。
+- TodoItem 不再显示可点击的图钉/取消重复按钮；已是每日重复的任务只显示只读“每日”标识，避免误触导致未来日程消失。
+- 删除普通 todo 仍直接删除；删除每日重复 todo 必须弹出选择：`删除此日程` 或 `删除今天及未来所有日程`。
+- `删除此日程` 不应物理删除重复记录，否则重新打开同一天会被克隆回来；应写入 `deleted: 1` 的隐藏单日例外，列表、日期点和活动统计都必须忽略该记录，但克隆逻辑要用它阻止同一天重生。
+- `删除今天及未来所有日程` 删除当前日期和未来已有同组记录；过去记录不删除，只写入 `repeatStoppedAt = 当前日期`，让未来加载时不再克隆。
+- `todoApi.clonePinnedForDate(date)` 在 `fetchTodos` 加载目标日期时调用；克隆时扫描所有每日重复源，跳过 `deleted` 记录和 `date >= repeatStoppedAt` 的目标日期，按 `pinGroupId` 保留目标日期之前最新的源。
+- 克隆是延迟策略：不预生成数据，只在加载日期时检测补充。修改重复 todo 的文字后，后续克隆会使用同组最新源的文字。
 - TodoItem 使用 `motion.div` + `layout` 属性，列表重排时自动 FLIP 动画。
-
 ## Markdown 规则
 
 Markdown 相关文件：

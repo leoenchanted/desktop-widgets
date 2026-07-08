@@ -13,7 +13,7 @@ export const useTodoStore = create((set, get) => ({
     try {
       const items = await todoApi.getByDate(date);
       set({ items, loading: false });
-    } catch (err) {
+    } catch {
       set({ loading: false });
     }
   },
@@ -21,7 +21,6 @@ export const useTodoStore = create((set, get) => ({
   fetchTodos: async (date) => {
     set({ loading: true });
     try {
-      // Clone pinned todos from previous dates for this date
       await todoApi.clonePinnedForDate(date);
       const items = await todoApi.getByDate(date);
       set({ items, loading: false });
@@ -33,49 +32,66 @@ export const useTodoStore = create((set, get) => ({
   addTodo: async (text) => {
     const { currentDate } = get();
     const todo = await todoApi.create(currentDate, text);
-    set((s) => ({ items: [...s.items, todo] }));
+    set((state) => ({ items: [...state.items, todo] }));
+    return todo;
+  },
+
+  addRepeatingTodo: async (text) => {
+    const { currentDate } = get();
+    const todo = await todoApi.createDailyRepeat(currentDate, text);
+    const items = await todoApi.getByDate(currentDate);
+    const datesWithData = await todoApi.getAllDates();
+    set({ items, datesWithData });
     return todo;
   },
 
   toggleTodo: async (id) => {
-    const item = get().items.find((i) => i.id === id);
+    const item = get().items.find((todo) => todo.id === id);
     if (!item) return;
     await todoApi.update(id, { completed: item.completed ? 0 : 1 });
-    set((s) => ({
-      items: s.items.map((i) =>
-        i.id === id ? { ...i, completed: i.completed ? 0 : 1 } : i
-      ),
+    set((state) => ({
+      items: state.items.map((todo) => (
+        todo.id === id ? { ...todo, completed: todo.completed ? 0 : 1 } : todo
+      )),
     }));
   },
 
   updateTodo: async (id, text) => {
     await todoApi.update(id, { text });
-    set((s) => ({
-      items: s.items.map((i) => (i.id === id ? { ...i, text } : i)),
+    set((state) => ({
+      items: state.items.map((todo) => (todo.id === id ? { ...todo, text } : todo)),
     }));
   },
 
-  deleteTodo: async (id) => {
-    await todoApi.delete(id);
-    set((s) => ({ items: s.items.filter((i) => i.id !== id) }));
+  deleteTodo: async (id, scope = 'single') => {
+    if (scope === 'future') {
+      await todoApi.deleteFromDateForward(id);
+    } else {
+      await todoApi.deleteOccurrence(id);
+    }
+
+    const { currentDate } = get();
+    const items = await todoApi.getByDate(currentDate);
+    const datesWithData = await todoApi.getAllDates();
+    set({ items, datesWithData });
   },
 
   togglePin: async (id) => {
     await todoApi.togglePin(id);
-    // Refetch sorted list so sort_order changes take effect
     const { currentDate } = get();
     const items = await todoApi.getByDate(currentDate);
-    set({ items });
+    const datesWithData = await todoApi.getAllDates();
+    set({ items, datesWithData });
   },
 
   reorderTodos: async (orderedIds) => {
     const { currentDate } = get();
     await todoApi.reorder(currentDate, orderedIds);
-    set((s) => {
-      const map = {};
-      orderedIds.forEach((id, idx) => { map[id] = idx; });
+    set((state) => {
+      const orderMap = {};
+      orderedIds.forEach((id, index) => { orderMap[id] = index; });
       return {
-        items: [...s.items].sort((a, b) => map[a.id] - map[b.id]),
+        items: [...state.items].sort((a, b) => orderMap[a.id] - orderMap[b.id]),
       };
     });
   },

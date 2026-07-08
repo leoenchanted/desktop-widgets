@@ -115,7 +115,7 @@ async function getGroupedData() {
         .filter((entry) => entry.date && entry.date !== 'workspace')
         .map((entry) => [entry.date, entry]),
     ),
-    todos: groupByDate(todos),
+    todos: groupByDate(todos.filter((todo) => !todo.deleted)),
     sessions: groupByDate(sessions),
     reviews: new Map(reviews.filter((review) => review.date).map((review) => [review.date, review])),
   };

@@ -259,7 +259,7 @@ const MarkdownEditor = ({ todayKey }) => {
           title="日记草稿"
           icon={FaPenNib}
           action={
-            <div className="flex flex-wrap items-center justify-end gap-2">
+            <div className="os-editor-actions flex flex-wrap items-center justify-end gap-2">
               <MarkdownSearchPanel
                 disabled={loading}
                 onBeforeSearch={handleBeforeDraftSearch}

@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2560" height="1600" viewBox="0 0 2560 1600" fill="none">
+  <defs>
+    <linearGradient id="sky" x2="0" y2="1600" gradientUnits="userSpaceOnUse"><stop stop-color="#183e50"/><stop offset=".36" stop-color="#82a6ad"/><stop offset=".62" stop-color="#e9cbaa"/><stop offset="1" stop-color="#9babaa"/></linearGradient>
+    <linearGradient id="far" x2="0" y2="1250" gradientUnits="userSpaceOnUse"><stop stop-color="#abc0c3"/><stop offset="1" stop-color="#47747e"/></linearGradient>
+    <linearGradient id="ridge" x2="1600" y2="1550" gradientUnits="userSpaceOnUse"><stop stop-color="#527c87"/><stop offset="1" stop-color="#143f4c"/></linearGradient>
+    <linearGradient id="front" x2="2000" y2="1600" gradientUnits="userSpaceOnUse"><stop stop-color="#2e5c69"/><stop offset="1" stop-color="#071f2b"/></linearGradient>
+    <linearGradient id="snow" x1="1100" y1="500" x2="1300" y2="1100" gradientUnits="userSpaceOnUse"><stop stop-color="#e2e6df"/><stop offset="1" stop-color="#8faeb2" stop-opacity="0"/></linearGradient>
+    <filter id="grain"><feTurbulence type="fractalNoise" baseFrequency=".65" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/><feComponentTransfer><feFuncA type="linear" slope=".065"/></feComponentTransfer><feBlend in="SourceGraphic" mode="soft-light"/></filter>
+  </defs>
+  <g filter="url(#grain)">
+    <path fill="url(#sky)" d="M0 0h2560v1600H0z"/>
+    <path fill="url(#far)" d="m0 960 140-98 107 44 184-180 121 87 138-179 109 134 99-65 173 131 149-65 177 101 184-161 190 126 184-206 103 144 129-44 136 71 137-57v921H0z"/>
+    <path fill="url(#ridge)" d="m0 1246 146-90 129 22 174-224 84 70 191-140 115-195 77 24 181-219 105 161 68-23 207 297 116-77 234 187 128-60 156 123 189-42 160 70v470H0z"/>
+    <path fill="url(#snow)" d="m839 689 77 24 181-219 105 161 68-23 148 213-187-130-29 45-101-167-49 117-47-25-145 168 17-83-96 110z"/>
+    <path fill="#254f5d" opacity=".5" d="m1097 494 35 345 114 125 171 228 76 176-329-233-237-22 159-307z"/>
+    <path fill="url(#front)" d="m0 996 147 83 117 46 99 135 196 83 222 139 177 36 185 82H0zm2560-159-156 70-163 124-115 36-165 153-177 58-192 147-186 65-229 110h1383z"/>
+    <path stroke="#aed0cd" stroke-opacity=".1" stroke-width="2" d="m2560 858-292 204-139 36-211 201-274 137M0 1013l245 150 125 133 329 148"/>
+  </g>
+</svg>

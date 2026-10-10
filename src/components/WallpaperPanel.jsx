@@ -80,7 +80,7 @@ const WallpaperPanel = ({ onClose }) => {
     <div className="fixed inset-0 z-[9999] flex items-center justify-center px-4 py-6" onClick={onClose}>
       <div className="absolute inset-0 bg-black/44 backdrop-blur-sm" />
       <div
-        className="glass-panel relative w-full max-w-lg overflow-hidden p-0 shadow-2xl animate-bubble"
+        className="glass-panel relative max-h-[90dvh] w-full max-w-lg overflow-y-auto p-0 shadow-2xl animate-bubble glass-scrollbar"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-4 border-b border-white/10 px-5 py-5">
@@ -91,13 +91,16 @@ const WallpaperPanel = ({ onClose }) => {
             </div>
             <h3 className="mt-2 text-lg font-semibold text-white">壁纸设置</h3>
             <p className="mt-1 text-xs leading-5 text-white/42">
-              支持图片 URL 和本地图片，本地图片会保存到当前浏览器 IndexedDB。
+              选一处喜欢的风景，也可以上传自己的照片，保存在当前浏览器。
             </p>
           </div>
           <IconButton icon={FaTimes} onClick={onClose} title="关闭" className="h-9 w-9" />
         </div>
 
         <div className="grid gap-4 p-5">
+          <div className="os-wallpaper-presets" aria-label="精选壁纸">
+            {[['alpine', '远山 · 清晨'], ['dusk', '山谷 · 日落'], ['night', '深山 · 入夜']].map(([id, label]) => <button key={id} title={`使用${label}壁纸`} aria-pressed={bg === `/wallpapers/${id}.svg`} style={{ backgroundImage: `url(/wallpapers/${id}.svg)` }} onClick={() => { setBg(`/wallpapers/${id}.svg`); setUrlInput(''); setStatus(`已切换至${label}`); }}><span>{label}</span></button>)}
+          </div>
           <div
             className="relative h-32 overflow-hidden rounded-2xl border border-white/10 bg-white/8"
             style={bg ? { backgroundImage: `url("${bg.replaceAll('"', '\\"')}")`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}

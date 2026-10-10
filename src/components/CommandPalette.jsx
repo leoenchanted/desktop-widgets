@@ -138,12 +138,13 @@ const CommandPalette = ({ close, onAddWidget, onOpenBackup }) => {
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return baseCommands;
+    if (/^(todo|task|任务|添加任务)\s+\S/i.test(q)) return baseCommands.filter(command => command.id === 'add-todo');
 
     return baseCommands.filter((command) => {
       const haystack = [command.label, ...(command.keywords || [])]
         .join(' ')
         .toLowerCase();
-      return haystack.includes(q) || q.startsWith('todo ') || q.startsWith('任务 ');
+      return haystack.includes(q);
     });
   }, [baseCommands, query]);
 

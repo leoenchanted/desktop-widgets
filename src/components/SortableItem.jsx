@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { FaExpandAlt, FaTimes } from 'react-icons/fa';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -10,6 +10,7 @@ const SortableItem = ({
   component: Component,
   isEditMode,
   isCompact,
+  availableColumns = 12,
   gridSize,
   margin,
   onRemove,
@@ -17,6 +18,8 @@ const SortableItem = ({
 }) => {
   const [isResizing, setIsResizing] = useState(false);
   const resizeStartRef = useRef(null);
+  const resizeCleanupRef = useRef(null);
+  useEffect(() => () => resizeCleanupRef.current?.(), []);
   const {
     attributes,
     listeners,
@@ -32,7 +35,7 @@ const SortableItem = ({
   const minH = config.minH || 1;
   const maxW = config.maxW || 6;
   const maxH = config.maxH || 5;
-  const effectiveW = isCompact ? Math.min(widget.w, 2) : widget.w;
+  const effectiveW = Math.min(widget.w, isCompact ? 2 : availableColumns, availableColumns);
   const effectiveH = isCompact ? Math.min(widget.h, 2) : widget.h;
 
   const style = {
@@ -70,21 +73,28 @@ const SortableItem = ({
     const handlePointerUp = () => {
       resizeStartRef.current = null;
       setIsResizing(false);
+      resizeCleanupRef.current?.();
+      resizeCleanupRef.current = null;
+    };
+
+    resizeCleanupRef.current = () => {
       window.removeEventListener('pointermove', handlePointerMove);
       window.removeEventListener('pointerup', handlePointerUp);
+      window.removeEventListener('pointercancel', handlePointerUp);
     };
 
     window.addEventListener('pointermove', handlePointerMove);
     window.addEventListener('pointerup', handlePointerUp);
+    window.addEventListener('pointercancel', handlePointerUp);
   };
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      {...attributes}
-      {...listeners}
-      className={`group relative h-full animate-pop-in ${
+      {...(isEditMode ? attributes : {})}
+      {...(isEditMode ? listeners : {})}
+      className={`group relative h-full ${
         isDragging ? 'z-50 scale-[0.985] cursor-grabbing opacity-90' : ''
       } ${isEditMode && !isDragging && !isResizing ? 'cursor-grab hover:scale-[1.01]' : ''} ${
         isResizing ? 'select-none' : ''
@@ -95,7 +105,9 @@ const SortableItem = ({
           !isDragging ? 'hover:-translate-y-1 hover:border-white/30 hover:bg-white/12' : ''
         } widget-card`}
       >
-        <Component widget={widget} widgetId={id} />
+        <div inert={isEditMode || undefined} className="h-full min-h-0 w-full">
+          <Component widget={widget} widgetId={id} />
+        </div>
         {isEditMode && <div className="absolute inset-0 z-30 bg-transparent" />}
       </div>
 

@@ -1,8 +1,12 @@
-const CACHE_NAME = 'desktop-widgets-shell-v2';
+const CACHE_NAME = 'desktop-widgets-shell-v5-canvas-fonts';
 const SHELL_ASSETS = [
   '/',
   '/manifest.webmanifest',
   '/pwa-icon.svg',
+  '/wallpapers/alpine.svg',
+  '/wallpapers/dusk.svg',
+  '/wallpapers/night.svg',
+  '/fonts/excalifont/Excalifont-Latin.woff2',
   '/audio/ambient/rain.mp3',
   '/audio/ambient/ocean.mp3',
   '/audio/ambient/storm.mp3',

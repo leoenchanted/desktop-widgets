@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   DndContext,
   KeyboardSensor,
@@ -25,6 +25,8 @@ const SortableBoard = ({
   isEditMode,
 }) => {
   const [isCompact, setIsCompact] = useState(() => window.innerWidth <= 720);
+  const boardRef = useRef(null);
+  const [availableColumns, setAvailableColumns] = useState(12);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, {
@@ -33,6 +35,16 @@ const SortableBoard = ({
   );
   const actualGridSize = isCompact ? 112 : gridSize;
   const actualMargin = isCompact ? 14 : margin;
+
+  useEffect(() => {
+    const board = boardRef.current;
+    const observer = new ResizeObserver(([entry]) => {
+      if (entry.contentRect.width <= 0) return;
+      setAvailableColumns(Math.max(1, Math.floor((entry.contentRect.width + actualMargin) / (actualGridSize + actualMargin))));
+    });
+    observer.observe(board);
+    return () => observer.disconnect();
+  }, [actualGridSize, actualMargin]);
 
   useEffect(() => {
     const handleResize = () => setIsCompact(window.innerWidth <= 720);
@@ -66,6 +78,7 @@ const SortableBoard = ({
         strategy={rectSortingStrategy}
       >
         <div
+          ref={boardRef}
           className="grid justify-center"
           style={{
             gridTemplateColumns: `repeat(auto-fill, minmax(${actualGridSize}px, 1fr))`,
@@ -86,6 +99,7 @@ const SortableBoard = ({
                 component={config.component}
                 isEditMode={isEditMode}
                 isCompact={isCompact}
+                availableColumns={availableColumns}
                 gridSize={actualGridSize}
                 margin={actualMargin}
                 onRemove={onRemoveItem}

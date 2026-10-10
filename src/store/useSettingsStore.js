@@ -9,8 +9,7 @@ import {
 import { wallpaperApi } from '../api/wallpaperApi';
 import { DEFAULT_WORKSPACE_FX_MODE, WORKSPACE_FX_MODE_VALUES } from '../config/workspaceFxModes';
 
-const DEFAULT_BG =
-  'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?ixlib=rb-4.0.3&auto=format&fit=crop&w=2940&q=80';
+const DEFAULT_BG = '/wallpapers/alpine.svg';
 
 function legacyValue(key) {
   try {

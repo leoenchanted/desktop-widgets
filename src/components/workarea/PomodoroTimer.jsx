@@ -284,7 +284,7 @@ const PomodoroTimer = ({ todayKey }) => {
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col items-center justify-center py-3">
-        <div className="relative h-28 w-28">
+        <div className="os-pomodoro-ring relative h-28 w-28">
           <svg className="h-full w-full -rotate-90" viewBox="0 0 128 128">
             <circle
               cx="64"

@@ -2,6 +2,7 @@
 @import "./styles/glass.css";
 @import "./styles/animations.css";
 @import "./styles/vditor-overrides.css";
+@import "./styles/desktop-os.css";
 
 * {
   box-sizing: border-box;
@@ -28,11 +29,13 @@ body {
   text-rendering: geometricPrecision;
 }
 
-button,
-input,
-textarea,
-select {
-  font: inherit;
+@layer base {
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
+  }
 }
 
 button {
@@ -104,4 +107,3 @@ button:disabled {
   font-variant-numeric: tabular-nums;
   letter-spacing: 0;
 }
-

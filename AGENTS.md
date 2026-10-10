@@ -268,6 +268,7 @@ IndexedDB stores：
 - `pomodoro_sessions`：番茄钟完成记录，按 `date` 建索引。
 - `assets`：本地图片/壁纸 Blob，按 `type` 建索引。
 - `pinned_notes`：工作区置顶记录，主记录 id 为 `main`，长期保留，不按日期切换。
+- `canvases`：无限画布；`main` 是私人画布，`room:<id>` 是加入过的共享画布本地副本。
 - `backup_snapshots`：自动备份内部快照，不进入普通完整 JSON 导出，用户可以从备份面板里恢复。
 
 IndexedDB 升级规则：
@@ -452,6 +453,16 @@ Markdown 相关文件：
 
 不要随意删掉 fallback，除非确认 IndexedDB 和浏览器文件能力永远可用。
 
+## 无限画布规则
+
+- 入口在桌面 Dock 和应用启动台，画布作为独立全屏区域显示，必须保留返回桌面按钮并沿用当前壁纸。
+- UI 在 `src/components/CanvasWorkspace.jsx`，样式在 `src/styles/canvas.css`，画布元素和字体配置在 `src/canvas/model.js`。
+- 内容保存在 IndexedDB `canvases` store，包含在完整 JSON 和自动快照中；发起者的邀请密钥保存在本机的会话元数据以便刷新后恢复，不写进 JSON 备份。
+- 共享连接在 `src/canvas/collaboration.js`：浏览器用随机 256 位密钥和 AES-GCM 加密画布消息，再通过 PeerJS/WebRTC 数据通道发送。密钥位于邀请 URL 的 fragment，不应发送到信令服务。
+- 第一版共享采用发起者作为实时会话主机，发起者必须保持画布打开；访客通过邀请链接加入。不同浏览器或设备的联网共享依赖可用的 WebRTC 网络连接。
+- 共享不应成为本地绘图、保存或备份的依赖。更新元素时用版本号合并，删除应保留 tombstone 以防旧状态把元素复活。
+- 开发时可先运行 `npm run dev`，再运行 `npm run test:canvas`，检查本地保存及双浏览器共享。
+
 ## 备份格式
 
 完整备份由前端导出 JSON，文件名类似：
@@ -464,7 +475,7 @@ desktop-widgets-backup-YYYY-MM-DD.json
 
 ```json
 {
-  "version": 4,
+  "version": 5,
   "app": "desktop-widgets",
   "storage": "indexeddb",
   "exportedAt": "2026-05-19T00:00:00.000Z",
@@ -476,14 +487,15 @@ desktop-widgets-backup-YYYY-MM-DD.json
     "daily_reviews": [],
     "pomodoro_sessions": [],
     "assets": [],
-    "pinned_notes": []
+    "pinned_notes": [],
+    "canvases": []
   }
 }
 ```
 
 `assets` 导出时会把 Blob 转成 `dataUrl`，导入时再转回 Blob 存进 IndexedDB。修改备份格式时必须提高 `version`，并在导入逻辑里兼容旧格式。
 
-当前备份版本为 v4，新增 `pinned_notes`。旧备份没有该字段时按空数组处理。
+当前备份版本为 v5，新增 `canvases`。旧备份没有该字段时按空数组处理；共享邀请密钥不进入导出文件。
 
 ## 置顶记录规则
 

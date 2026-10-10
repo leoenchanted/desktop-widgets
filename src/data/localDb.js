@@ -1,5 +1,5 @@
 const DB_NAME = 'desktop-widgets-local';
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 const DB_OPEN_TIMEOUT_MS = 10000;
 
 const DATA_STORES = [
@@ -11,6 +11,7 @@ const DATA_STORES = [
   'pomodoro_sessions',
   'assets',
   'pinned_notes',
+  'canvases',
 ];
 
 let dbPromise;
@@ -68,6 +69,9 @@ function openDb() {
       }
       if (!db.objectStoreNames.contains('pinned_notes')) {
         db.createObjectStore('pinned_notes', { keyPath: 'id' });
+      }
+      if (!db.objectStoreNames.contains('canvases')) {
+        db.createObjectStore('canvases', { keyPath: 'id' });
       }
     };
 

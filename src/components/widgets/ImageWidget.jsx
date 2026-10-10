@@ -109,7 +109,7 @@ const ImageWidget = ({ widgetId = 'default' }) => {
           </div>
         </>
       ) : (
-        <div className="flex w-full flex-col items-center gap-4 px-5 text-center">
+        <div className="os-image-placeholder flex h-full w-full flex-col items-center justify-center gap-4 px-5 text-center">
           {saving ? (
             <div className="flex items-center gap-2 text-sm font-medium text-white/42">
               <FaSpinner className="animate-spin" />

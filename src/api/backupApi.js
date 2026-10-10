@@ -3,7 +3,7 @@ import { normalizeWidgetLayout } from '../config/widgetRegistry';
 import { LEGACY_WORKSPACE_KEY, countMarkdownWords, inferMarkdownEntryDate } from './markdownApi';
 import { blobToDataUrl, dataUrlToBlob } from '../utils/imageCompression';
 
-const BACKUP_VERSION = 4;
+const BACKUP_VERSION = 5;
 
 async function serializeAssets(assets = []) {
   return Promise.all(
@@ -44,6 +44,13 @@ function serializeSettings(settings = []) {
   return settings.filter(
     (row) => row?.key !== 'autoBackupDirectoryHandle' && row?.key !== 'autoBackupDirectoryName',
   );
+}
+
+function normalizeCanvasRows(canvases = []) {
+  return canvases.map(({ shareRoom, ...row }) => {
+    void shareRoom;
+    return { ...row, shareRoom: null };
+  });
 }
 
 function normalizeMarkdownRows(entries = []) {
@@ -104,6 +111,7 @@ function countsFor(data) {
     pomodoro: data.pomodoro_sessions?.length || 0,
     assets: data.assets?.length || 0,
     pinned: data.pinned_notes?.length || 0,
+    canvases: data.canvases?.length || 0,
   };
 }
 
@@ -121,6 +129,7 @@ export const backupApi = {
         widgets: normalizeWidgetRows(data.widgets),
         markdown_entries: normalizeMarkdownRows(data.markdown_entries),
         assets: await serializeAssets(data.assets),
+        canvases: normalizeCanvasRows(data.canvases),
       },
     };
   },
@@ -140,6 +149,7 @@ export const backupApi = {
       pomodoro_sessions: data.pomodoro_sessions || [],
       assets: hydrateAssets(data.assets || []),
       pinned_notes: data.pinned_notes || [],
+      canvases: normalizeCanvasRows(data.canvases || []),
     };
     await importAllStores(hydrated);
     if (directoryHandle) {

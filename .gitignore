@@ -10,6 +10,7 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+.codex-tmp/
 server/data/
 server/node_modules/
 *.local

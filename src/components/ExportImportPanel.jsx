@@ -30,7 +30,7 @@ const ExportImportPanel = ({ onClose }) => {
     try {
       const result = await importBackup(file);
       setStatus(
-        `导入成功：${result.counts.todos} 个任务，${result.counts.markdown} 篇草稿，${result.counts.assets} 个本地资源`,
+        `导入成功：${result.counts.todos} 个任务，${result.counts.markdown} 篇草稿，${result.counts.canvases} 张画布，${result.counts.assets} 个本地资源`,
       );
       setTimeout(() => window.location.reload(), 1200);
     } catch (error) {
@@ -64,7 +64,7 @@ const ExportImportPanel = ({ onClose }) => {
             </div>
             <h3 className="mt-2 text-lg font-semibold text-white">本地数据备份</h3>
             <p className="mt-1 text-xs leading-5 text-white/42">
-              导出完整 JSON：设置、组件布局、Todo、草稿、回顾、番茄钟和本地图片资源。
+              导出完整 JSON：设置、组件布局、Todo、草稿、回顾、番茄钟、无限画布和本地图片资源。
             </p>
           </div>
           <IconButton icon={FaTimes} onClick={onClose} title="关闭" className="h-9 w-9" />

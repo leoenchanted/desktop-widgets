@@ -1,6 +1,13 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { FaDownload, FaExclamationTriangle, FaHistory, FaKeyboard, FaRedo } from 'react-icons/fa';
+import { FaExclamationTriangle, FaRedo } from 'react-icons/fa';
+import { AnimatePresence, MotionConfig } from 'framer-motion';
+import LockScreen from './components/LockScreen';
+import DesktopDock from './components/DesktopDock';
+import DesktopHome from './components/DesktopHome';
+import Launchpad from './components/Launchpad';
+import DesktopGuide from './components/DesktopGuide';
+import DesktopDialog from './components/ui/DesktopDialog';
 import SortableBoard from './components/SortableBoard';
 import WidgetPicker from './components/WidgetPicker';
 import Header from './components/Header';
@@ -22,6 +29,9 @@ import IconButton from './components/ui/IconButton';
 import { WIDGET_REGISTRY, normalizeWidgetLayout } from './config/widgetRegistry';
 import { getRecord, putRecord } from './data/localDb';
 import { migrateLegacyBackendIfNeeded } from './data/migrations';
+import { readInvite } from './canvas/invite';
+
+const CanvasWorkspace = lazy(() => import('./components/CanvasWorkspace'));
 
 const DEFAULT_LAYOUT = normalizeWidgetLayout([
   {
@@ -57,7 +67,7 @@ const DEFAULT_LAYOUT = normalizeWidgetLayout([
 ]);
 
 const FIXED_GRID_SIZE = 140;
-const FIXED_MARGIN = 30;
+const FIXED_MARGIN = 20;
 
 function legacyLayout() {
   try {
@@ -77,7 +87,12 @@ function App() {
   const [showExportImport, setShowExportImport] = useState(false);
   const [showChangelog, setShowChangelog] = useState(false);
   const [showWallpaperPanel, setShowWallpaperPanel] = useState(false);
-  const pickerRef = useRef(null);
+  const [locked, setLocked] = useState(() => !readInvite());
+  const [canvasOpen, setCanvasOpen] = useState(() => Boolean(readInvite()));
+  const [showLaunchpad, setShowLaunchpad] = useState(false);
+  const [showGuide, setShowGuide] = useState(false);
+  const [workView, setWorkView] = useState('all');
+  const enterDesktopRef = useRef(null);
 
   const {
     bg,
@@ -85,8 +100,11 @@ function App() {
     initializeSettings,
     workspaceFxEnabled,
     workspaceFxMode,
+    activeSection,
+    setSection,
+    username,
   } = useSettingsStore();
-  const cmdPalette = useCommandPalette();
+  const cmdPalette = useCommandPalette(!locked);
   useWindowControlsOverlay();
   useAutoBackup(dataReady);
 
@@ -140,7 +158,9 @@ function App() {
         setItems(normalizedLayout);
         setLayoutReady(true);
       }
-    })();
+    })().catch((error) => {
+      if (!cancelled) setStartupError(error?.message || '组件布局暂时无法读取');
+    });
 
     return () => {
       cancelled = true;
@@ -159,16 +179,6 @@ function App() {
   }, [items, layoutReady]);
 
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (pickerRef.current && !pickerRef.current.contains(event.target)) {
-        setShowPicker(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  useEffect(() => {
     if (bg) {
       document.body.style.backgroundImage = `url("${bg.replaceAll('"', '\\"')}")`;
       document.body.style.backgroundSize = 'cover';
@@ -183,6 +193,12 @@ function App() {
 
   useEffect(() => {
     const handler = (event) => {
+      if (locked) return;
+      if (event.key === 'Escape') {
+        setShowWallpaperPanel(false);
+        setShowChangelog(false);
+        setShowExportImport(false);
+      }
       if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === 'e') {
         event.preventDefault();
         setShowExportImport((value) => !value);
@@ -190,7 +206,7 @@ function App() {
     };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, []);
+  }, [locked]);
 
   const handleAddWidget = (widgetConfig) => {
     const [newItem] = normalizeWidgetLayout([{
@@ -203,7 +219,28 @@ function App() {
     setShowPicker(false);
   };
 
-  if (!dataReady) {
+  const openApp = (view) => {
+    if (view === 'canvas') {
+      setCanvasOpen(true);
+      setShowLaunchpad(false);
+      return;
+    }
+    setWorkView(view);
+    setSection('work');
+  };
+  const closeCanvas = () => {
+    window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    setCanvasOpen(false);
+  };
+  const lockDesktop = () => {
+    cmdPalette.close();
+    setShowPicker(false);
+    setShowLaunchpad(false);
+    setLocked(true);
+  };
+  const enterDesktop = () => { setLocked(false); };
+
+  if (!dataReady || !layoutReady || startupError) {
     return (
       <div className="app-shell flex min-h-screen w-full items-center justify-center px-5 text-white">
         <div className="glass-panel w-full max-w-sm p-5 text-center animate-bubble">
@@ -233,7 +270,7 @@ function App() {
             <>
               <div className="mt-2 text-base font-semibold text-white/88">正在打开本地工作台</div>
               <div className="mt-2 text-xs leading-5 text-white/42">
-                正在准备 IndexedDB、本地持久化存储和旧数据迁移。
+                正在准备你的组件、记录和个人设置。
               </div>
             </>
           )}
@@ -254,32 +291,26 @@ function App() {
   );
 
   return (
-    <div className="app-shell min-h-screen w-full pb-24 text-white">
+    <MotionConfig reducedMotion="user">
+    <div className={`app-shell os-shell min-h-screen w-full text-white ${locked ? 'is-locked' : 'is-unlocked'}`}>
       <div className="pointer-events-none fixed inset-0 -z-10 bg-black/22" />
       <WorkspaceFxLayer enabled={workspaceFxEnabled} mode={workspaceFxMode} scope="global" />
 
-      <div className="app-content-layer">
+      <div inert={locked || undefined} aria-hidden={locked || undefined}>
+      <div className="app-content-layer" ref={enterDesktopRef} tabIndex={-1}>
         <Header
           onTogglePicker={() => setShowPicker((value) => !value)}
           onOpenWallpaper={() => setShowWallpaperPanel(true)}
           showPicker={showPicker}
+          onLaunchpad={() => setShowLaunchpad(true)}
         />
 
-        <div ref={pickerRef} className="relative z-[999]">
-          {showPicker && (
-            <div className="absolute right-6 top-0 mt-2 md:right-8">
-              <WidgetPicker onAdd={handleAddWidget} />
-            </div>
-          )}
-        </div>
-
-        <Layout widgetBoard={widgetBoard} workArea={<WorkArea />} />
+        <Layout widgetBoard={<DesktopHome count={items.length} onOpenApp={openApp} onAdd={() => setShowPicker(true)} onArrange={() => setItems(current => [...current].sort((a, b) => b.h - a.h || b.w - a.w))}>{widgetBoard}</DesktopHome>} workArea={<WorkArea view={workView} onViewChange={setWorkView} />} />
       </div>
 
-      <BackupReminder onOpenBackup={() => setShowExportImport(true)} />
-      <DomainMigrationWarning />
+      {!locked && <BackupReminder onOpenBackup={() => setShowExportImport(true)} />}
 
-      {cmdPalette.isOpen && (
+      {!locked && cmdPalette.isOpen && (
         <CommandPalette
           close={cmdPalette.close}
           onAddWidget={handleAddWidget}
@@ -287,42 +318,29 @@ function App() {
         />
       )}
 
-      {showExportImport && (
+      {!locked && showExportImport && (
         <ExportImportPanel onClose={() => setShowExportImport(false)} />
       )}
 
-      {showChangelog && (
+      {!locked && showChangelog && (
         <ChangelogPanel onClose={() => setShowChangelog(false)} />
       )}
 
-      {showWallpaperPanel && (
+      {!locked && showWallpaperPanel && (
         <WallpaperPanel onClose={() => setShowWallpaperPanel(false)} />
       )}
 
-      {!cmdPalette.isOpen && (
-        <div className="fixed bottom-[calc(env(safe-area-inset-bottom)+1rem)] right-5 z-30 flex flex-col items-end gap-3 md:right-6">
-          <WorkspaceFxControl />
-          <IconButton
-            icon={FaDownload}
-            onClick={() => setShowExportImport(true)}
-            className="h-12 w-12 rounded-full shadow-lg"
-            title="备份数据"
-          />
-          <IconButton
-            icon={FaHistory}
-            onClick={() => setShowChangelog(true)}
-            className="h-12 w-12 rounded-full shadow-lg"
-            title="更新日志"
-          />
-          <IconButton
-            icon={FaKeyboard}
-            onClick={cmdPalette.open}
-            className="h-12 w-12 rounded-full shadow-lg"
-            title="命令面板"
-          />
-        </div>
-      )}
+      {!locked && showPicker && <DesktopDialog title="把喜欢的，放上桌面。" eyebrow="WIDGET LIBRARY" onClose={() => setShowPicker(false)}><WidgetPicker onAdd={config => { handleAddWidget(config); setSection('widgets'); }} /></DesktopDialog>}
+      {!locked && showLaunchpad && <Launchpad onClose={() => setShowLaunchpad(false)} onOpenApp={openApp} onWallpaper={() => setShowWallpaperPanel(true)} onBackup={() => setShowExportImport(true)} onWidgets={() => setShowPicker(true)} />}
+      {!locked && showGuide && <DesktopGuide onClose={() => setShowGuide(false)} onChangelog={() => setShowChangelog(true)} />}
+      <DesktopDock activeSection={activeSection} onSection={setSection} onLaunchpad={() => setShowLaunchpad(true)} onSearch={cmdPalette.open} onBackup={() => setShowExportImport(true)} onHelp={() => setShowGuide(true)} onLock={lockDesktop} onCanvas={() => openApp('canvas')} />
+      <div className="os-fx-tray"><WorkspaceFxControl /></div>
+      </div>
+      {!locked && canvasOpen && <Suspense fallback={<div className="canvas-route-loading">正在打开画布…</div>}><CanvasWorkspace bg={bg} onBack={closeCanvas} /></Suspense>}
+      <AnimatePresence onExitComplete={() => enterDesktopRef.current?.focus({ preventScroll: true })}>{locked && <LockScreen key="lock" onEnter={enterDesktop} username={username} bg={bg} />}</AnimatePresence>
+      <DomainMigrationWarning />
     </div>
+    </MotionConfig>
   );
 }
 

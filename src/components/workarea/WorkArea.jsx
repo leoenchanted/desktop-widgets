@@ -1,71 +1,41 @@
-import React, { useEffect, useState } from 'react';
-import { FaCalendarDay, FaDatabase, FaLayerGroup } from 'react-icons/fa';
+import { useEffect, useState } from 'react';
+import { FiColumns, FiEdit3, FiCheckSquare, FiClock, FiBookmark, FiActivity, FiArrowLeft } from 'react-icons/fi';
 import TodoList from './TodoList';
 import MarkdownEditor from './MarkdownEditor';
 import PomodoroTimer from './PomodoroTimer';
 import PinnedNote from './PinnedNote';
 import ActivityHeatmap from './ActivityHeatmap';
-import GlassPanel from '../ui/GlassPanel';
-import StatusPill from '../ui/StatusPill';
 import { useTodayKey } from '../../hooks/useTodayKey';
 import { formatDate } from '../../utils/date';
+import { useSettingsStore } from '../../store/useSettingsStore';
 
-const WorkArea = () => {
+const views = [
+  { id: 'all', label: '总览', Icon: FiColumns }, { id: 'write', label: '写作', Icon: FiEdit3 },
+  { id: 'tasks', label: '任务', Icon: FiCheckSquare }, { id: 'focus', label: '专注', Icon: FiClock },
+  { id: 'notes', label: '置顶', Icon: FiBookmark }, { id: 'activity', label: '足迹', Icon: FiActivity },
+];
+
+export default function WorkArea({ view = 'all', onViewChange }) {
   const todayKey = useTodayKey();
   const [selectedDate, setSelectedDate] = useState(todayKey);
-
-  useEffect(() => {
-    setSelectedDate(todayKey);
-  }, [todayKey]);
-
-  return (
-    <div className="mx-auto flex w-full max-w-[1640px] flex-col gap-4 pb-8 md:min-h-[calc(100vh-230px)]">
-      <GlassPanel className="cockpit-panel cockpit-ruler px-5 py-5 md:px-6" padded={false}>
-        <div className="relative z-10 flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
-          <div>
-            <div className="panel-kicker flex items-center gap-2">
-              <FaLayerGroup size={11} />
-              Workspace Cockpit
-            </div>
-            <h1 className="mt-2 text-2xl font-medium leading-none text-white md:text-4xl">
-              今日工作台
-            </h1>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2 pb-1">
-            <StatusPill variant="accent">
-              <FaCalendarDay className="mr-1.5" size={11} />
-              {formatDate(selectedDate)}
-            </StatusPill>
-            <StatusPill>
-              <FaDatabase className="mr-1.5" size={10} />
-              IndexedDB 本地保存
-            </StatusPill>
-          </div>
-        </div>
-      </GlassPanel>
-
-      <div className="workspace-grid flex-1">
-        <aside className="workspace-stack">
-          <PomodoroTimer todayKey={selectedDate} />
-          <ActivityHeatmap
-            todayKey={todayKey}
-            selectedDate={selectedDate}
-            onDateSelect={setSelectedDate}
-          />
-        </aside>
-
-        <main className="h-[min(72svh,680px)] min-h-[520px] min-w-0 md:h-[clamp(620px,calc(100svh-260px),780px)] md:min-h-0">
-          <MarkdownEditor todayKey={selectedDate} />
-        </main>
-
-        <aside className="workspace-stack">
-          <TodoList todayKey={selectedDate} />
-          <PinnedNote />
-        </aside>
-      </div>
+  const setSection = useSettingsStore(state => state.setSection);
+  const activeSection = useSettingsStore(state => state.activeSection);
+  useEffect(() => { setSelectedDate(todayKey); }, [todayKey]);
+  return <div className={`os-workspace os-view-${view}`}>
+    <div className="os-window-bar"><div className="os-window-name"><button onClick={() => setSection('widgets')} title="返回桌面" aria-label="返回桌面"><FiArrowLeft /></button><span>工作空间</span><span className="os-window-slash">/</span><span className="os-window-date">{formatDate(selectedDate)}</span></div><span className="os-window-local"><i /> 浏览器本地保存</span></div>
+    <div className="os-workspace-toolbar"><div><h1>{view === 'all' ? '让今天，有条不紊。' : { write: '给想法，一点空间。', tasks: '一次，做好一件事。', focus: '此刻，只专注于你。', notes: '重要的事，留在这里。', activity: '每一点积累，都算数。' }[view]}</h1></div>
+      <div className="os-view-switcher" aria-label="工作区视图">{views.map(({ id, label, Icon }) => <button key={id} onClick={() => onViewChange(id)} aria-pressed={view === id} title={`${label}视图`}><Icon size={14} /><span>{label}</span></button>)}</div>
     </div>
-  );
-};
-
-export default WorkArea;
+    <div className="workspace-grid">
+      <aside className="workspace-stack os-stack-left">
+        <div className="os-tool-slot os-tool-focus"><PomodoroTimer todayKey={selectedDate} /></div>
+        <div className="os-tool-slot os-tool-activity"><ActivityHeatmap visible={activeSection === 'work' && (view === 'all' || view === 'activity')} todayKey={todayKey} selectedDate={selectedDate} onDateSelect={date => { setSelectedDate(date); onViewChange('all'); }} /></div>
+      </aside>
+      <main className="os-editor-slot"><MarkdownEditor todayKey={selectedDate} /></main>
+      <aside className="workspace-stack os-stack-right">
+        <div className="os-tool-slot os-tool-tasks"><TodoList todayKey={selectedDate} /></div>
+        <div className="os-tool-slot os-tool-notes"><PinnedNote /></div>
+      </aside>
+    </div>
+  </div>;
+}

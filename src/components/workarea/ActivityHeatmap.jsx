@@ -95,7 +95,7 @@ const BreakdownRow = ({ label, value, max, tone = 'green' }) => {
   );
 };
 
-const ActivityHeatmap = ({ todayKey, selectedDate, onDateSelect }) => {
+const ActivityHeatmap = ({ todayKey, selectedDate, onDateSelect, visible = true }) => {
   const scrollRef = useRef(null);
   const [storedDays, setStoredDays] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -205,11 +205,12 @@ const ActivityHeatmap = ({ todayKey, selectedDate, onDateSelect }) => {
 
   useEffect(() => {
     const scroller = scrollRef.current;
-    if (!scroller || loading || !weeks.length) return;
-    requestAnimationFrame(() => {
+    if (!visible || !scroller || loading || !weeks.length) return;
+    const frame = requestAnimationFrame(() => {
       scroller.scrollLeft = scroller.scrollWidth;
     });
-  }, [loading, weeks.length]);
+    return () => cancelAnimationFrame(frame);
+  }, [loading, weeks.length, visible]);
 
   const handleDayClick = (day) => {
     if (day.isFuture) return;

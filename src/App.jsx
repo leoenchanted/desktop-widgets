@@ -89,6 +89,7 @@ function App() {
   const [showWallpaperPanel, setShowWallpaperPanel] = useState(false);
   const [locked, setLocked] = useState(() => !readInvite());
   const [canvasOpen, setCanvasOpen] = useState(() => Boolean(readInvite()));
+  const [canvasRouteKey, setCanvasRouteKey] = useState(0);
   const [showLaunchpad, setShowLaunchpad] = useState(false);
   const [showGuide, setShowGuide] = useState(false);
   const [workView, setWorkView] = useState('all');
@@ -107,6 +108,17 @@ function App() {
   const cmdPalette = useCommandPalette(!locked);
   useWindowControlsOverlay();
   useAutoBackup(dataReady);
+
+  useEffect(() => {
+    const openInvite = () => {
+      if (!readInvite()) return;
+      setLocked(false);
+      setCanvasOpen(true);
+      setCanvasRouteKey(value => value + 1);
+    };
+    window.addEventListener('hashchange', openInvite);
+    return () => window.removeEventListener('hashchange', openInvite);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -336,8 +348,8 @@ function App() {
       <DesktopDock activeSection={activeSection} onSection={setSection} onLaunchpad={() => setShowLaunchpad(true)} onSearch={cmdPalette.open} onBackup={() => setShowExportImport(true)} onHelp={() => setShowGuide(true)} onLock={lockDesktop} onCanvas={() => openApp('canvas')} />
       <div className="os-fx-tray"><WorkspaceFxControl /></div>
       </div>
-      {!locked && canvasOpen && <Suspense fallback={<div className="canvas-route-loading">正在打开画布…</div>}><CanvasWorkspace bg={bg} onBack={closeCanvas} /></Suspense>}
-      <AnimatePresence onExitComplete={() => enterDesktopRef.current?.focus({ preventScroll: true })}>{locked && <LockScreen key="lock" onEnter={enterDesktop} username={username} bg={bg} />}</AnimatePresence>
+      {!locked && canvasOpen && <Suspense fallback={<div className="canvas-route-loading">正在打开画布…</div>}><CanvasWorkspace key={canvasRouteKey} bg={bg} onBack={closeCanvas} /></Suspense>}
+      <AnimatePresence onExitComplete={() => { if (!canvasOpen && document.activeElement === document.body) enterDesktopRef.current?.focus({ preventScroll: true }); }}>{locked && <LockScreen key="lock" onEnter={enterDesktop} username={username} bg={bg} />}</AnimatePresence>
       <DomainMigrationWarning />
     </div>
     </MotionConfig>

@@ -72,7 +72,13 @@ export function elementBounds(element) {
     const fontSize = element.fontSize || 28;
     const lines = wrapCanvasText(element.text, fontSize, element.font, element.wrapWidth);
     const context = textMeasureContext(fontSize, element.font);
-    return { x: element.x, y: element.y, w: Math.max(70, ...lines.map(line => context.measureText(line || ' ').width)), h: lines.length * fontSize * 1.4 };
+    const naturalWidth = Math.max(80, ...lines.map(line => context.measureText(line || ' ').width));
+    return {
+      x: element.x,
+      y: element.y,
+      w: element.wrapWidth || naturalWidth,
+      h: lines.length * fontSize * (element.lineHeight || 1.4),
+    };
   }
   if (element.type === 'pen') {
     const xs = element.points?.map(point => point[0]) || [element.x];

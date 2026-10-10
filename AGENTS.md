@@ -457,11 +457,14 @@ Markdown 相关文件：
 
 - 入口在桌面 Dock 和应用启动台，画布作为独立全屏区域显示，必须保留返回桌面按钮并沿用当前壁纸。
 - UI 在 `src/components/CanvasWorkspace.jsx`，样式在 `src/styles/canvas.css`，画布元素和字体配置在 `src/canvas/model.js`。
+- 文字元素的 `wrapWidth` 是实际排版宽度，拖动右侧手柄时更新并重新分行；`fixedWidth` 表示用户已明确调整宽度，双击编辑后不能被自动测量覆盖。`lineHeight` 和 `textAlign` 同时作用于 SVG 显示与原位输入框，旧元素缺省时使用 1.4 与左对齐。
+- 属性栏按文字、形状和图片区分：文字提供字体、字号、行距、对齐及框宽；形状提供描边颜色和线宽；图片只显示相关操作。
 - 内容保存在 IndexedDB `canvases` store，包含在完整 JSON 和自动快照中；发起者的邀请密钥保存在本机的会话元数据以便刷新后恢复，不写进 JSON 备份。
-- 共享连接在 `src/canvas/collaboration.js`：浏览器用随机 256 位密钥和 AES-GCM 加密画布消息，再通过 PeerJS/WebRTC 数据通道发送。密钥位于邀请 URL 的 fragment，不应发送到信令服务。
-- 第一版共享采用发起者作为实时会话主机，发起者必须保持画布打开；访客通过邀请链接加入。不同浏览器或设备的联网共享依赖可用的 WebRTC 网络连接。
+- 共享消息使用随机 256 位密钥和 AES-GCM 在浏览器加密；密钥位于邀请 URL 的 fragment，不发送到中继。设置 `VITE_CANVAS_RELAY_URL` 后优先使用 `src/canvas/relayCollaboration.js` 和 `canvas-relay/` 的 Cloudflare Workers Free WebSocket 房间服务；服务只转发密文，不保存画布。未设置时回退 `src/canvas/collaboration.js` 的 PeerJS/WebRTC。
+- 公网共享依赖有效的 STUN/TURN。`api/canvas-turn.js` 使用服务端 `CANVAS_TURN_KEY_ID` 与 `CANVAS_TURN_API_TOKEN` 向 Cloudflare 申请短时 TURN 凭据，前端只能拿到短时凭据；未配置时允许 STUN 直连但需明确告知连接限制。不要把 TURN 长期密钥写到前端。邀请链接在已打开的页面中发生 `hashchange` 时也要进入对应房间。
+- 发起者作为实时会话主机，必须保持画布打开；访客通过邀请链接加入。房间服务应支持主机离开后以原邀请链接重连，并通过 hibernation 降低免费额度占用。邀请链接在已打开的页面中发生 `hashchange` 时也要进入对应房间。
 - 共享不应成为本地绘图、保存或备份的依赖。更新元素时用版本号合并，删除应保留 tombstone 以防旧状态把元素复活。
-- 开发时可先运行 `npm run dev`，再运行 `npm run test:canvas`，检查本地保存及双浏览器共享。
+- 开发时分别运行 `npm run relay:dev`、设置 `VITE_CANVAS_RELAY_URL=http://127.0.0.1:8787` 后运行 `npm run dev`，再运行 `npm run test:canvas`，检查本地保存、双浏览器加密共享和重连。跨网络连接仍需部署 Worker 后用真实不同网络验证。
 
 ## 备份格式
 

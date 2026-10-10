@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { FiArrowLeft, FiArrowDownLeft, FiCircle, FiCopy, FiEdit3, FiImage, FiLink2, FiMaximize2, FiMinus, FiMousePointer, FiMove, FiPlus, FiShare2, FiSlash, FiSquare, FiTrash2, FiType, FiRotateCcw, FiRotateCw } from 'react-icons/fi';
+import { FiAlignCenter, FiAlignLeft, FiAlignRight, FiArrowLeft, FiArrowDownLeft, FiCircle, FiCopy, FiEdit3, FiImage, FiLink2, FiMaximize2, FiMinus, FiMousePointer, FiMove, FiPlus, FiShare2, FiSlash, FiSquare, FiTrash2, FiType, FiRotateCcw, FiRotateCw } from 'react-icons/fi';
 import { getRecord, putRecord } from '../data/localDb';
 import { createCanvasSession } from '../canvas/collaboration';
+import { createRelayCanvasSession, hasCanvasRelay } from '../canvas/relayCollaboration';
 import { createInvite, inviteUrl, readInvite } from '../canvas/invite';
 import { CANVAS_COLORS, CANVAS_FONTS, compareVersion, elementBounds, fontFamily, mergeElements, translated, wrapCanvasText } from '../canvas/model';
 import '../styles/canvas.css';
@@ -25,7 +26,8 @@ function isEditingTarget(target) {
   return target instanceof HTMLElement && (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName));
 }
 
-function textEditorWidth(text, fontSize, family, zoom, left) {
+function textEditorWidth(text, fontSize, family, zoom, left, fixedWidth) {
+  if (fixedWidth) return Math.max(80, fixedWidth * zoom);
   const screenFontSize = fontSize * zoom;
   const context = document.createElement('canvas').getContext('2d');
   context.font = `${screenFontSize}px ${family}`;
@@ -78,11 +80,16 @@ function CanvasElement({ element, selected, editing, onPointerDown, onDoubleClic
   }
   if (element.type === 'pen') art = <polyline points={(element.points || []).map(point => point.join(',')).join(' ')} {...common} />;
   if (element.type === 'image' && /^data:image\/(png|jpeg|webp|gif);base64,/i.test(element.src || '')) art = <image href={element.src} x={x} y={y} width={w} height={h} preserveAspectRatio="none" />;
-  if (element.type === 'text' && !editing) art = <text x={element.x} y={element.y + (element.fontSize || 28)} fill={element.color || '#fff'} fontSize={element.fontSize || 28} fontFamily={fontFamily(element.font)} fontWeight="400" dominantBaseline="auto" xmlSpace="preserve">{wrapCanvasText(element.text, element.fontSize || 28, element.font, element.wrapWidth).map((line, index) => <tspan key={index} x={element.x} dy={index ? '1.4em' : 0}>{line || ' '}</tspan>)}</text>;
+  if (element.type === 'text' && !editing) {
+    const anchor = element.textAlign === 'center' ? 'middle' : element.textAlign === 'right' ? 'end' : 'start';
+    const textX = anchor === 'middle' ? x + w / 2 : anchor === 'end' ? x + w : x;
+    art = <text x={textX} y={y + (element.fontSize || 28)} fill={element.color || '#fff'} fontSize={element.fontSize || 28} fontFamily={fontFamily(element.font)} fontWeight="400" textAnchor={anchor} dominantBaseline="auto" xmlSpace="preserve">{wrapCanvasText(element.text, element.fontSize || 28, element.font, element.wrapWidth).map((line, index) => <tspan key={index} x={textX} dy={index ? `${element.lineHeight || 1.4}em` : 0}>{line || ' '}</tspan>)}</text>;
+  }
   return <g className="canvas-element" onPointerDown={onPointerDown} onDoubleClick={onDoubleClick}>
     {art}
     {selected && !editing && <rect className="canvas-selection" x={x - 8} y={y - 8} width={Math.max(w, 8) + 16} height={Math.max(h, 8) + 16} rx="7" />}
     <rect x={x - 9} y={y - 9} width={Math.max(w, 8) + 18} height={Math.max(h, 8) + 18} fill="transparent" stroke="none" />
+    {selected && element.type === 'text' && !editing && <rect className="canvas-text-resize-handle" x={x + w + 1} y={y + h / 2 - 7} width="14" height="14" rx="4" onPointerDown={onResizePointerDown} aria-label="调整文字框宽度" />}
     {selected && !['pen', 'text'].includes(element.type) && <rect className="canvas-resize-handle" x={x + w + 2} y={y + h + 2} width="12" height="12" rx="3" onPointerDown={onResizePointerDown} />}
   </g>;
 }
@@ -96,8 +103,12 @@ export default function CanvasWorkspace({ bg, onBack }) {
   const viewRef = useRef(DEFAULT_VIEW);
   const [tool, setTool] = useState('select');
   const toolRef = useRef('select');
-  const [color, setColor] = useState(CANVAS_COLORS[0]);
+  const [textColor, setTextColor] = useState(CANVAS_COLORS[0]);
+  const [strokeColor, setStrokeColor] = useState(CANVAS_COLORS[0]);
   const [font, setFont] = useState('system');
+  const [fontSize, setFontSize] = useState(30);
+  const [lineHeight, setLineHeight] = useState(1.4);
+  const [textAlign, setTextAlign] = useState('left');
   const [strokeWidth, setStrokeWidth] = useState(3);
   const [selectedId, setSelectedId] = useState(null);
   const [editingId, setEditingId] = useState(null);
@@ -114,6 +125,7 @@ export default function CanvasWorkspace({ bg, onBack }) {
   const fileRef = useRef(null);
   const editRef = useRef(null);
   const sessionRef = useRef(null);
+  const hostRetryCountRef = useRef(0);
   const gestureRef = useRef(null);
   const lastBlankClickRef = useRef(null);
   const spaceRef = useRef(false);
@@ -189,7 +201,8 @@ export default function CanvasWorkspace({ bg, onBack }) {
   useEffect(() => {
     if (!ready || !invite) return undefined;
     let cancelled = false;
-    createCanvasSession({
+    let registrationTimer;
+    (hasCanvasRelay ? createRelayCanvasSession : createCanvasSession)({
       invite,
       host: isHost,
       getSnapshot: () => elementsRef.current,
@@ -197,13 +210,24 @@ export default function CanvasWorkspace({ bg, onBack }) {
         applyIncoming(message.type === 'snapshot' ? message.elements : message.element);
         if (message.type === 'snapshot') setHasSynced(true);
       },
-      onStatus: (state, peers, error) => { if (!cancelled) setStatus({ state, peers, message: error?.message || '' }); },
+      onStatus: (state, peers, error) => {
+        if (cancelled) return;
+        if (state === 'hosting') hostRetryCountRef.current = 0;
+        if (isHost && error?.type === 'unavailable-id' && hostRetryCountRef.current < 4) {
+          const attempt = ++hostRetryCountRef.current;
+          setStatus({ state: 'reconnecting', peers: 0, message: '正在恢复共享房间…' });
+          registrationTimer = setTimeout(() => setSessionNonce(value => value + 1), attempt * 1500);
+          return;
+        }
+        setStatus({ state, peers, message: error?.message || '' });
+      },
     }).then(session => {
       if (cancelled) session.close();
       else sessionRef.current = session;
     }).catch(error => setStatus({ state: 'error', peers: 0, message: error.message }));
     return () => {
       cancelled = true;
+      if (registrationTimer) clearTimeout(registrationTimer);
       sessionRef.current?.close();
       sessionRef.current = null;
     };
@@ -221,9 +245,10 @@ export default function CanvasWorkspace({ bg, onBack }) {
 
   const selected = elements.find(element => element.id === selectedId && !element.deleted);
   const editing = elements.find(element => element.id === editingId && !element.deleted);
+  const propertyMode = selected?.type === 'text' || (!selected && tool === 'text') ? 'text' : selected?.type === 'image' ? 'image' : 'shape';
   const editingLeft = editing ? view.x + editing.x * view.zoom : 0;
   const editingTop = editing ? view.y + editing.y * view.zoom : 0;
-  const editingWidth = editing ? textEditorWidth(editText, editing.fontSize || 28, fontFamily(editing.font), view.zoom, editingLeft) : 0;
+  const editingWidth = editing ? textEditorWidth(editText, editing.fontSize || 28, fontFamily(editing.font), view.zoom, editingLeft, editing.fixedWidth ? editing.wrapWidth : null) : 0;
   const editingMaxHeight = Math.max(96, Math.min(window.innerHeight - 120, window.innerHeight - Math.max(100, editingTop) - 40));
 
   useLayoutEffect(() => {
@@ -249,7 +274,7 @@ export default function CanvasWorkspace({ bg, onBack }) {
   };
 
   const createEditableText = point => {
-    const created = commit({ id: uuidv4(), type: 'text', x: point.x, y: point.y, text: '', font, fontSize: 30, color });
+    const created = commit({ id: uuidv4(), type: 'text', x: point.x, y: point.y, text: '', font, fontSize, lineHeight, textAlign, color: textColor });
     beginText(created, true);
     setTool('select'); toolRef.current = 'select';
   };
@@ -257,7 +282,7 @@ export default function CanvasWorkspace({ bg, onBack }) {
   const finishText = () => {
     if (!editing) return;
     const text = editText.trimEnd();
-    const updated = commit(text ? { ...editing, text, wrapWidth: editingWidth / viewRef.current.zoom } : { ...editing, deleted: true });
+    const updated = commit(text ? { ...editing, text, wrapWidth: editing.fixedWidth ? editing.wrapWidth : editingWidth / viewRef.current.zoom } : { ...editing, deleted: true });
     if (text || textBeforeRef.current) remember(textBeforeRef.current, updated);
     textBeforeRef.current = null;
     setEditingId(null);
@@ -280,7 +305,7 @@ export default function CanvasWorkspace({ bg, onBack }) {
       return;
     }
     const type = currentTool === 'arrow' ? 'line' : currentTool;
-    const raw = { id: uuidv4(), type, x: point.x, y: point.y, w: 0, h: 0, color, strokeWidth, ...(currentTool === 'arrow' ? { arrow: true } : {}), ...(type === 'pen' ? { points: [[point.x, point.y]] } : {}) };
+    const raw = { id: uuidv4(), type, x: point.x, y: point.y, w: 0, h: 0, color: strokeColor, strokeWidth, ...(currentTool === 'arrow' ? { arrow: true } : {}), ...(type === 'pen' ? { points: [[point.x, point.y]] } : {}) };
     const created = commit(raw);
     gestureRef.current = { mode: 'draw', id: created.id, start: point, before: null };
     setSelectedId(created.id);
@@ -299,7 +324,7 @@ export default function CanvasWorkspace({ bg, onBack }) {
     if (toolRef.current !== 'select' || event.button !== 0 || !hasSynced) return;
     event.stopPropagation();
     stageRef.current.setPointerCapture(event.pointerId);
-    gestureRef.current = { mode: 'resize', id: element.id, before: element, bounds: elementBounds(element) };
+    gestureRef.current = { mode: element.type === 'text' ? 'resize-text' : 'resize', id: element.id, before: element, bounds: elementBounds(element) };
   };
 
   const handleStageMove = (event) => {
@@ -314,6 +339,7 @@ export default function CanvasWorkspace({ bg, onBack }) {
     if (!previous) return;
     let next;
     if (gesture.mode === 'move') next = translated(gesture.before, point.x - gesture.start.x, point.y - gesture.start.y);
+    else if (gesture.mode === 'resize-text') next = { ...gesture.before, wrapWidth: Math.max(80, Math.round(point.x - gesture.bounds.x)), fixedWidth: true };
     else if (gesture.mode === 'resize') next = { ...gesture.before, x: gesture.bounds.x, y: gesture.bounds.y, w: Math.max(16, point.x - gesture.bounds.x), h: Math.max(16, point.y - gesture.bounds.y) };
     else if (previous.type === 'pen') {
       const last = previous.points.at(-1);
@@ -419,7 +445,7 @@ export default function CanvasWorkspace({ bg, onBack }) {
         return;
       }
       const shortcut = TOOLS.find(entry => entry.key.toLowerCase() === event.key.toLowerCase());
-      if (shortcut && !event.ctrlKey && !event.metaKey) { setTool(shortcut.id); toolRef.current = shortcut.id; }
+      if (shortcut && !event.ctrlKey && !event.metaKey) { setTool(shortcut.id); toolRef.current = shortcut.id; if (shortcut.id !== 'select') setSelectedId(null); }
     };
     const onKeyUp = event => { if (event.code === 'Space') spaceRef.current = false; };
     const onPaste = event => {
@@ -458,6 +484,7 @@ export default function CanvasWorkspace({ bg, onBack }) {
   const startShare = async () => {
     const next = createInvite();
     try {
+      hostRetryCountRef.current = 0;
       await putRecord('canvases', { id: 'main', elements: elementsRef.current, shareRoom: next, updated_at: new Date().toISOString() });
       window.history.replaceState(null, '', inviteUrl(next));
       setIsHost(true);
@@ -488,7 +515,12 @@ export default function CanvasWorkspace({ bg, onBack }) {
     catch { setNotice('请手动复制下面的邀请链接'); }
   };
 
-  const statusText = status.state === 'hosting' ? `正在共享 · ${status.peers} 人已加入` : status.state === 'connected' ? '实时连接中' : status.state === 'connecting' ? '正在连接…' : status.state === 'error' ? `连接失败：${status.message || '请稍后重试'}` : status.state === 'decrypt-error' ? '解密失败，请检查邀请链接' : status.state === 'disconnected' ? '连接已断开，画布仍保存在本机' : '仅在此浏览器';
+  const retryShare = () => {
+    setStatus({ state: 'connecting', peers: 0, message: '' });
+    setSessionNonce(value => value + 1);
+  };
+
+  const statusText = status.state === 'hosting' ? `正在共享 · ${status.peers} 人已加入` : status.state === 'connected' ? '实时连接中' : status.state === 'connecting' ? '正在连接…' : status.state === 'reconnecting' ? status.message || '正在重新连接…' : status.state === 'error' ? `连接失败：${status.message || '请稍后重试'}` : status.state === 'decrypt-error' ? '解密失败，请检查邀请链接' : status.state === 'disconnected' ? '连接已断开，画布仍保存在本机' : '仅在此浏览器';
 
   return <div className="canvas-workspace" style={{ '--canvas-wallpaper': bg ? `url(${JSON.stringify(bg)})` : 'none' }}>
     <div className="canvas-wallpaper" />
@@ -508,19 +540,35 @@ export default function CanvasWorkspace({ bg, onBack }) {
       onDragOver={event => event.preventDefault()}
       onDrop={event => { event.preventDefault(); const file = Array.from(event.dataTransfer.files).find(item => item.type.startsWith('image/')); if (file) addImage(file, screenToWorld(event.clientX, event.clientY)); }}>
       <svg className="canvas-svg" aria-label="无限画布绘图区"><g transform={`translate(${view.x} ${view.y}) scale(${view.zoom})`}>{elements.filter(element => !element.deleted).map(element => <CanvasElement key={element.id} element={element} selected={selectedId === element.id} editing={editingId === element.id} onPointerDown={event => handleElementDown(event, element)} onResizePointerDown={event => handleResizeDown(event, element)} onDoubleClick={event => { event.stopPropagation(); if (element.type === 'text') beginText(element); }} />)}</g></svg>
-      {editing && <div className="canvas-text-editor-shell" style={{ left: editingLeft, top: editingTop, width: editingWidth, maxHeight: editingMaxHeight, fontFamily: fontFamily(editing.font), fontSize: (editing.fontSize || 28) * view.zoom, color: editing.color }}><span className="canvas-text-editor-measure" aria-hidden="true">{editText || '\u200b'}{editText.endsWith('\n') ? '\u200b' : ''}</span><textarea ref={editRef} className="canvas-text-editor" value={editText} onChange={event => setEditText(event.target.value)} onBlur={finishText} onPointerDown={event => event.stopPropagation()} onWheel={event => event.stopPropagation()} onKeyDown={event => { if (event.key === 'Escape' || ((event.ctrlKey || event.metaKey) && event.key === 'Enter')) { event.preventDefault(); finishText(); } }} placeholder="在这里写下想法…" spellCheck={false} aria-label="编辑画布文字" /></div>}
+      {editing && <div className="canvas-text-editor-shell" style={{ left: editingLeft, top: editingTop, width: editingWidth, maxHeight: editingMaxHeight, fontFamily: fontFamily(editing.font), fontSize: (editing.fontSize || 28) * view.zoom, lineHeight: editing.lineHeight || 1.4, textAlign: editing.textAlign || 'left', color: editing.color }}><span className="canvas-text-editor-measure" aria-hidden="true">{editText || '\u200b'}{editText.endsWith('\n') ? '\u200b' : ''}</span><textarea ref={editRef} className="canvas-text-editor" value={editText} onChange={event => setEditText(event.target.value)} onBlur={finishText} onPointerDown={event => event.stopPropagation()} onWheel={event => event.stopPropagation()} onKeyDown={event => { if (event.key === 'Escape' || ((event.ctrlKey || event.metaKey) && event.key === 'Enter')) { event.preventDefault(); finishText(); } }} placeholder="在这里写下想法…" spellCheck={false} aria-label="编辑画布文字" /></div>}
       {!elements.some(element => !element.deleted) && ready && <div className="canvas-empty"><span>01 / A SPACE TO THINK</span><strong>从一个想法开始。</strong><p>写字、贴图、画线。画布会随着你的思路一直延伸。</p><button onClick={() => { setTool('text'); toolRef.current = 'text'; }}>添加第一段文字 <FiArrowDownLeft /></button></div>}
-      {ready && !hasSynced && <div className="canvas-sync-wait"><strong>正在加入共享画布</strong><span>等待发起者保持画布打开并完成连接…</span></div>}
+      {ready && !hasSynced && <div className="canvas-sync-wait"><strong>{status.state === 'error' ? '共享连接失败' : status.state === 'reconnecting' ? '正在重新连接' : '正在加入共享画布'}</strong><span>{status.message || '等待发起者保持画布打开并完成连接…'}</span>{['error', 'disconnected', 'decrypt-error'].includes(status.state) && <button onClick={retryShare}>重新连接</button>}</div>}
     </main>
 
-    <aside className="canvas-toolbox" aria-label="画布工具">{TOOLS.map(({ id, label, Icon, key }) => <button key={id} className={tool === id ? 'active' : ''} title={`${label} (${key})`} aria-label={label} aria-pressed={tool === id} onClick={() => { setTool(id); toolRef.current = id; }}><Icon /></button>)}<span className="canvas-tool-divider" /><button title="插入图片" aria-label="插入图片" onClick={() => fileRef.current?.click()}><FiImage /></button><input ref={fileRef} hidden type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={event => { if (event.target.files[0]) addImage(event.target.files[0]); event.target.value = ''; }} /></aside>
+    <aside className="canvas-toolbox" aria-label="画布工具">{TOOLS.map(({ id, label, Icon, key }) => <button key={id} className={tool === id ? 'active' : ''} title={`${label} (${key})`} aria-label={label} aria-pressed={tool === id} onClick={() => { setTool(id); toolRef.current = id; if (id !== 'select') setSelectedId(null); }}><Icon /></button>)}<span className="canvas-tool-divider" /><button title="插入图片" aria-label="插入图片" onClick={() => fileRef.current?.click()}><FiImage /></button><input ref={fileRef} hidden type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={event => { if (event.target.files[0]) addImage(event.target.files[0]); event.target.value = ''; }} /></aside>
 
-    <div className="canvas-properties"><span className="canvas-properties-label">{selected ? '所选元素' : '绘制样式'}</span><div className="canvas-colors">{CANVAS_COLORS.map(swatch => <button key={swatch} className={(selected?.color || color) === swatch ? 'active' : ''} style={{ '--swatch': swatch }} aria-label={`颜色 ${swatch}`} title={swatch} onClick={() => { setColor(swatch); if (selected) changeSelected({ color: swatch }); }} />)}</div><span className="canvas-property-divider" /><label className="canvas-select-wrap"><span>字体</span><select value={selected?.font || font} onChange={event => { setFont(event.target.value); if (selected?.type === 'text') changeSelected({ font: event.target.value }); }}>{CANVAS_FONTS.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>{selected?.type === 'text' && <label className="canvas-select-wrap"><span>字号</span><select value={selected.fontSize || 30} onChange={event => changeSelected({ fontSize: Number(event.target.value) })}><option value="20">20</option><option value="30">30</option><option value="42">42</option><option value="60">60</option></select></label>}<label className="canvas-select-wrap"><span>线宽</span><select value={selected?.strokeWidth || strokeWidth} onChange={event => { const value = Number(event.target.value); setStrokeWidth(value); if (selected && selected.type !== 'text' && selected.type !== 'image') changeSelected({ strokeWidth: value }); }}><option value="2">细</option><option value="3">标准</option><option value="6">粗</option></select></label>{selected && <button className="canvas-delete" title="删除所选元素" onClick={deleteSelected}><FiTrash2 /></button>}</div>
+    <div className="canvas-properties" aria-label={propertyMode === 'text' ? '文字属性' : propertyMode === 'image' ? '图片属性' : '形状属性'}>
+      <span className="canvas-properties-label">{propertyMode === 'text' ? '文字' : propertyMode === 'image' ? '图片' : '绘制'}</span>
+      {propertyMode !== 'image' && <>
+        <div className="canvas-colors" aria-label={propertyMode === 'text' ? '文字颜色' : '描边颜色'}>{CANVAS_COLORS.map(swatch => <button key={swatch} className={(selected?.color || (propertyMode === 'text' ? textColor : strokeColor)) === swatch ? 'active' : ''} style={{ '--swatch': swatch }} aria-label={`颜色 ${swatch}`} title={swatch} onClick={() => { if (propertyMode === 'text') setTextColor(swatch); else setStrokeColor(swatch); if (selected) changeSelected({ color: swatch }); }} />)}</div>
+        <span className="canvas-property-divider" />
+      </>}
+      {propertyMode === 'text' && <>
+        <label className="canvas-select-wrap"><span>字体</span><select aria-label="字体" value={selected?.font || font} onChange={event => { setFont(event.target.value); if (selected?.type === 'text') changeSelected({ font: event.target.value }); }}>{CANVAS_FONTS.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
+        <label className="canvas-select-wrap"><span>字号</span><select aria-label="字号" value={selected?.fontSize || fontSize} onChange={event => { const value = Number(event.target.value); setFontSize(value); if (selected?.type === 'text') changeSelected({ fontSize: value }); }}><option value="20">20</option><option value="30">30</option><option value="42">42</option><option value="60">60</option></select></label>
+        <label className="canvas-select-wrap"><span>行距</span><select aria-label="行距" value={selected?.lineHeight || lineHeight} onChange={event => { const value = Number(event.target.value); setLineHeight(value); if (selected?.type === 'text') changeSelected({ lineHeight: value }); }}><option value="1">1.0</option><option value="1.2">1.2</option><option value="1.4">1.4</option><option value="1.6">1.6</option><option value="1.8">1.8</option><option value="2">2.0</option></select></label>
+        <div className="canvas-align-control" role="group" aria-label="文本对齐">{[{ value: 'left', label: '左对齐', Icon: FiAlignLeft }, { value: 'center', label: '居中对齐', Icon: FiAlignCenter }, { value: 'right', label: '右对齐', Icon: FiAlignRight }].map(({ value, label, Icon }) => <button key={value} className={(selected?.textAlign || textAlign) === value ? 'active' : ''} title={label} aria-label={label} aria-pressed={(selected?.textAlign || textAlign) === value} onClick={() => { setTextAlign(value); if (selected?.type === 'text') changeSelected({ textAlign: value }); }}><Icon /></button>)}</div>
+        {selected?.type === 'text' && <label className="canvas-select-wrap canvas-width-control"><span>框宽</span><input aria-label="文字框宽度" type="number" min="80" max="2000" step="10" value={Math.round(selected.wrapWidth || elementBounds(selected).w)} onChange={event => { const value = Number(event.target.value); if (value >= 80 && value <= 2000) changeSelected({ wrapWidth: value, fixedWidth: true }); }} /><span>px</span></label>}
+      </>}
+      {propertyMode === 'shape' && <label className="canvas-select-wrap"><span>线宽</span><select aria-label="线宽" value={selected?.strokeWidth || strokeWidth} onChange={event => { const value = Number(event.target.value); setStrokeWidth(value); if (selected && selected.type !== 'text' && selected.type !== 'image') changeSelected({ strokeWidth: value }); }}><option value="2">细</option><option value="3">标准</option><option value="6">粗</option></select></label>}
+      {propertyMode === 'image' && <span className="canvas-properties-hint">拖动边角调整图片</span>}
+      {selected && <button className="canvas-delete" title="删除所选元素" onClick={deleteSelected}><FiTrash2 /></button>}
+    </div>
 
     <div className="canvas-bottom-left"><span className={`canvas-connection-dot ${status.state}`} />{statusText}</div>
     <div className="canvas-bottom-right"><button title="撤销 Ctrl+Z" onClick={() => historyStep('undo')}><FiRotateCcw /></button><button title="重做 Ctrl+Y" onClick={() => historyStep('redo')}><FiRotateCw /></button><span /><button title="缩小" onClick={() => zoomAt(.8, window.innerWidth / 2, window.innerHeight / 2)}><FiMinus /></button><strong>{Math.round(view.zoom * 100)}%</strong><button title="放大" onClick={() => zoomAt(1.25, window.innerWidth / 2, window.innerHeight / 2)}><FiPlus /></button><button title="适合全部内容" onClick={fitCanvas}><FiMaximize2 /></button></div>
 
-    {shareOpen && invite && <div className="canvas-share-popover"><div className="canvas-share-heading"><FiLink2 /><div><strong>一起画，同步此刻</strong><small>端到端加密 · 内容各自保存在浏览器</small></div><button onClick={() => setShareOpen(false)} title="关闭">×</button></div><p>将邀请链接发给对方。你需要保持此画布打开，对方才能实时加入。</p><div className="canvas-invite-row"><input readOnly value={inviteUrl(invite)} onFocus={event => event.target.select()} aria-label="共享邀请链接" /><button onClick={copyShare} title="复制邀请链接"><FiCopy /> 复制</button></div><span className="canvas-share-note">链接包含解密密钥，请只发给信任的人。关闭此画布后实时会话结束。</span>{status.state === 'error' || status.state === 'disconnected' ? <button className="canvas-retry-share" onClick={() => { setStatus({ state: 'connecting', peers: 0, message: '' }); setSessionNonce(value => value + 1); }}>重新连接</button> : null}{isHost && <button className="canvas-stop-share" onClick={stopShare}>结束共享</button>}</div>}
+    {shareOpen && invite && <div className="canvas-share-popover"><div className="canvas-share-heading"><FiLink2 /><div><strong>一起画，同步此刻</strong><small>端到端加密 · 内容各自保存在浏览器</small></div><button onClick={() => setShareOpen(false)} title="关闭">×</button></div><p>将邀请链接发给对方。你需要保持此画布打开，对方才能实时加入。</p><div className="canvas-invite-row"><input readOnly value={inviteUrl(invite)} onFocus={event => event.target.select()} aria-label="共享邀请链接" /><button onClick={copyShare} title="复制邀请链接"><FiCopy /> 复制</button></div><span className="canvas-share-note">链接包含解密密钥，请只发给信任的人。关闭此画布后实时会话结束。</span>{['error', 'disconnected', 'decrypt-error'].includes(status.state) && <button className="canvas-retry-share" onClick={retryShare}>重新连接</button>}{isHost && <button className="canvas-stop-share" onClick={stopShare}>结束共享</button>}</div>}
     {notice && <div className="canvas-notice" role="status">{notice}</div>}
     {!ready && <div className="canvas-loading">正在打开本地画布…</div>}
   </div>;

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'desktop-widgets-shell-v5-canvas-fonts';
+const CACHE_NAME = 'desktop-widgets-shell-v7-canvas-relay';
 const SHELL_ASSETS = [
   '/',
   '/manifest.webmanifest',

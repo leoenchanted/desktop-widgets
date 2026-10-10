@@ -1,6 +1,6 @@
 {
   "$schema": "../node_modules/wrangler/config-schema.json",
-  "name": "desktop-canvas-relay",
+  "name": "widgets",
   "main": "src/index.js",
   "compatibility_date": "2026-10-10",
   "durable_objects": {

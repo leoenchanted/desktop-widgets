@@ -15,7 +15,7 @@
 使用 [Cloudflare Workers Free](https://developers.cloudflare.com/workers/platform/pricing/) 部署 `canvas-relay/`。Workers Free 无需付款方式；本项目使用免费档支持的 SQLite-backed Durable Object 和 WebSocket Hibernation，房间服务只转发密文、不写入存储。免费额度用尽后服务可能拒绝新请求，不会自动变成付费计划。
 
 1. 注册或登录免费 Cloudflare 账号；在项目目录运行 `npm install`、`npx wrangler login`，完成浏览器登录。
-2. 运行 `npm run relay:deploy`，记下输出的 `https://desktop-canvas-relay.<你的子域>.workers.dev` 地址。若部署页面提示启用 `workers.dev` 子域，按提示启用免费的子域。
+2. 运行 `npm run relay:deploy`，记下输出的 `https://widgets.<你的子域>.workers.dev` 地址。若部署页面提示启用 `workers.dev` 子域，按提示启用免费的子域。
 3. 在网站的 Vercel 项目 **Settings → Environment Variables** 中，为 Production 添加 `VITE_CANVAS_RELAY_URL`，值填上一步的完整 `https://...workers.dev` 地址，然后部署本项目的新代码。无需连接 Codex 的 Vercel 账号，也无需 TURN Key。Vite 的 `VITE_` 变量会进入前端，这里只存公开的房间服务地址，没有密钥。
 4. 用家用网络和手机流量分别打开同一邀请链接，确认两边都显示已连接并能同步文字、形状和图片。
 

@@ -22,6 +22,16 @@ const TOOLS = [
 const DEFAULT_VIEW = { x: 0, y: 0, zoom: 1 };
 const MAX_IMAGE_BYTES = 12 * 1024 * 1024;
 
+function rectangleBetween(start, end) {
+  return { x: Math.min(start.x, end.x), y: Math.min(start.y, end.y), w: Math.abs(end.x - start.x), h: Math.abs(end.y - start.y) };
+}
+
+function overlapsRectangle(element, rectangle, padding) {
+  const { x, y, w, h } = elementBounds(element);
+  return x - padding <= rectangle.x + rectangle.w && x + w + padding >= rectangle.x
+    && y - padding <= rectangle.y + rectangle.h && y + h + padding >= rectangle.y;
+}
+
 function isEditingTarget(target) {
   return target instanceof HTMLElement && (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName));
 }
@@ -63,7 +73,7 @@ async function canvasImage(file) {
   }
 }
 
-function CanvasElement({ element, selected, editing, onPointerDown, onDoubleClick, onResizePointerDown }) {
+function CanvasElement({ element, selected, showResize, editing, onPointerDown, onDoubleClick, onResizePointerDown }) {
   if (element.deleted) return null;
   const { x, y, w, h } = elementBounds(element);
   const common = { stroke: element.color || '#f6f7f5', strokeWidth: element.strokeWidth || 3, strokeLinecap: 'round', strokeLinejoin: 'round', fill: 'none' };
@@ -89,8 +99,8 @@ function CanvasElement({ element, selected, editing, onPointerDown, onDoubleClic
     {art}
     {selected && !editing && <rect className="canvas-selection" x={x - 8} y={y - 8} width={Math.max(w, 8) + 16} height={Math.max(h, 8) + 16} rx="7" />}
     <rect x={x - 9} y={y - 9} width={Math.max(w, 8) + 18} height={Math.max(h, 8) + 18} fill="transparent" stroke="none" />
-    {selected && element.type === 'text' && !editing && <rect className="canvas-text-resize-handle" x={x + w + 1} y={y + h / 2 - 7} width="14" height="14" rx="4" onPointerDown={onResizePointerDown} aria-label="调整文字框宽度" />}
-    {selected && !['pen', 'text'].includes(element.type) && <rect className="canvas-resize-handle" x={x + w + 2} y={y + h + 2} width="12" height="12" rx="3" onPointerDown={onResizePointerDown} />}
+    {selected && showResize && element.type === 'text' && !editing && <rect className="canvas-text-resize-handle" x={x + w + 1} y={y + h / 2 - 7} width="14" height="14" rx="4" onPointerDown={onResizePointerDown} aria-label="调整文字框宽度" />}
+    {selected && showResize && !['pen', 'text'].includes(element.type) && <rect className="canvas-resize-handle" x={x + w + 2} y={y + h + 2} width="12" height="12" rx="3" onPointerDown={onResizePointerDown} />}
   </g>;
 }
 
@@ -110,7 +120,9 @@ export default function CanvasWorkspace({ bg, onBack }) {
   const [lineHeight, setLineHeight] = useState(1.4);
   const [textAlign, setTextAlign] = useState('left');
   const [strokeWidth, setStrokeWidth] = useState(3);
-  const [selectedId, setSelectedId] = useState(null);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [marquee, setMarquee] = useState(null);
+  const [spaceHeld, setSpaceHeld] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [editText, setEditText] = useState('');
   const [invite, setInvite] = useState(readInvite);
@@ -161,8 +173,10 @@ export default function CanvasWorkspace({ bg, onBack }) {
   }, [applyIncoming, actor]);
 
   const remember = useCallback((before, after) => {
-    if (JSON.stringify(before) === JSON.stringify(after)) return;
-    undoRef.current.push({ before, after });
+    const previous = before ? (Array.isArray(before) ? before : [before]) : [];
+    const next = after ? (Array.isArray(after) ? after : [after]) : [];
+    if (JSON.stringify(previous) === JSON.stringify(next)) return;
+    undoRef.current.push({ before: previous, after: next });
     if (undoRef.current.length > 80) undoRef.current.shift();
     redoRef.current = [];
   }, []);
@@ -243,9 +257,11 @@ export default function CanvasWorkspace({ bg, onBack }) {
     if (editingId) editRef.current?.focus();
   }, [editingId]);
 
-  const selected = elements.find(element => element.id === selectedId && !element.deleted);
+  const selectedElements = elements.filter(element => selectedIds.includes(element.id) && !element.deleted);
+  const selected = selectedElements.length === 1 ? selectedElements[0] : null;
   const editing = elements.find(element => element.id === editingId && !element.deleted);
-  const propertyMode = selected?.type === 'text' || (!selected && tool === 'text') ? 'text' : selected?.type === 'image' ? 'image' : 'shape';
+  const activeTool = spaceHeld ? 'hand' : tool;
+  const propertyMode = selectedElements.length > 1 ? 'multi' : selected?.type === 'text' || (!selected && tool === 'text') ? 'text' : selected?.type === 'image' ? 'image' : 'shape';
   const editingLeft = editing ? view.x + editing.x * view.zoom : 0;
   const editingTop = editing ? view.y + editing.y * view.zoom : 0;
   const editingWidth = editing ? textEditorWidth(editText, editing.fontSize || 28, fontFamily(editing.font), view.zoom, editingLeft, editing.fixedWidth ? editing.wrapWidth : null) : 0;
@@ -270,7 +286,7 @@ export default function CanvasWorkspace({ bg, onBack }) {
     textBeforeRef.current = isNew ? null : element;
     setEditingId(element.id);
     setEditText(element.text || '');
-    setSelectedId(element.id);
+    setSelectedIds([element.id]);
   };
 
   const createEditableText = point => {
@@ -294,9 +310,14 @@ export default function CanvasWorkspace({ bg, onBack }) {
     const point = screenToWorld(event.clientX, event.clientY);
     const currentTool = toolRef.current;
     event.currentTarget.setPointerCapture(event.pointerId);
-    if (event.button === 1 || spaceRef.current || currentTool === 'hand' || currentTool === 'select') {
-      if (currentTool === 'select' && !spaceRef.current && event.button !== 1) setSelectedId(null);
-      gestureRef.current = { mode: 'pan', tool: currentTool, blankClick: currentTool === 'select' && !spaceRef.current && event.button === 0, clientX: event.clientX, clientY: event.clientY, view: viewRef.current };
+    if (event.button === 1 || spaceRef.current || currentTool === 'hand') {
+      lastBlankClickRef.current = null;
+      gestureRef.current = { mode: 'pan', clientX: event.clientX, clientY: event.clientY, view: viewRef.current };
+      return;
+    }
+    if (currentTool === 'select') {
+      setSelectedIds([]);
+      gestureRef.current = { mode: 'marquee', start: point, clientX: event.clientX, clientY: event.clientY };
       return;
     }
     lastBlankClickRef.current = null;
@@ -308,20 +329,21 @@ export default function CanvasWorkspace({ bg, onBack }) {
     const raw = { id: uuidv4(), type, x: point.x, y: point.y, w: 0, h: 0, color: strokeColor, strokeWidth, ...(currentTool === 'arrow' ? { arrow: true } : {}), ...(type === 'pen' ? { points: [[point.x, point.y]] } : {}) };
     const created = commit(raw);
     gestureRef.current = { mode: 'draw', id: created.id, start: point, before: null };
-    setSelectedId(created.id);
+    setSelectedIds([created.id]);
   };
 
   const handleElementDown = (event, element) => {
-    if (toolRef.current !== 'select' || event.button !== 0 || editingId) return;
+    if (toolRef.current !== 'select' || spaceRef.current || event.button !== 0 || editingId || !hasSynced) return;
     event.stopPropagation();
     lastBlankClickRef.current = null;
     event.currentTarget.setPointerCapture(event.pointerId);
-    setSelectedId(element.id);
-    gestureRef.current = { mode: 'move', id: element.id, start: screenToWorld(event.clientX, event.clientY), before: element };
+    const moving = selectedIds.includes(element.id) ? selectedElements : [element];
+    if (!selectedIds.includes(element.id)) setSelectedIds([element.id]);
+    gestureRef.current = { mode: 'move', start: screenToWorld(event.clientX, event.clientY), before: moving };
   };
 
   const handleResizeDown = (event, element) => {
-    if (toolRef.current !== 'select' || event.button !== 0 || !hasSynced) return;
+    if (toolRef.current !== 'select' || spaceRef.current || event.button !== 0 || !hasSynced) return;
     event.stopPropagation();
     stageRef.current.setPointerCapture(event.pointerId);
     gestureRef.current = { mode: element.type === 'text' ? 'resize-text' : 'resize', id: element.id, before: element, bounds: elementBounds(element) };
@@ -335,11 +357,26 @@ export default function CanvasWorkspace({ bg, onBack }) {
       return;
     }
     const point = screenToWorld(event.clientX, event.clientY);
+    if (gesture.mode === 'marquee') {
+      if (Math.hypot(event.clientX - gesture.clientX, event.clientY - gesture.clientY) <= 6) return;
+      const rectangle = rectangleBetween(gesture.start, point);
+      setMarquee(rectangle);
+      const padding = 6 / viewRef.current.zoom;
+      setSelectedIds(elementsRef.current.filter(element => !element.deleted && overlapsRectangle(element, rectangle, padding)).map(element => element.id));
+      return;
+    }
+    if (gesture.mode === 'move') {
+      const dx = point.x - gesture.start.x;
+      const dy = point.y - gesture.start.y;
+      if (Math.hypot(dx, dy) * viewRef.current.zoom <= 2) return;
+      gesture.moved = true;
+      for (const element of gesture.before) commit(translated(element, dx, dy), event.timeStamp - lastSendRef.current > 65);
+      return;
+    }
     const previous = elementsRef.current.find(element => element.id === gesture.id);
     if (!previous) return;
     let next;
-    if (gesture.mode === 'move') next = translated(gesture.before, point.x - gesture.start.x, point.y - gesture.start.y);
-    else if (gesture.mode === 'resize-text') next = { ...gesture.before, wrapWidth: Math.max(80, Math.round(point.x - gesture.bounds.x)), fixedWidth: true };
+    if (gesture.mode === 'resize-text') next = { ...gesture.before, wrapWidth: Math.max(80, Math.round(point.x - gesture.bounds.x)), fixedWidth: true };
     else if (gesture.mode === 'resize') next = { ...gesture.before, x: gesture.bounds.x, y: gesture.bounds.y, w: Math.max(16, point.x - gesture.bounds.x), h: Math.max(16, point.y - gesture.bounds.y) };
     else if (previous.type === 'pen') {
       const last = previous.points.at(-1);
@@ -352,28 +389,45 @@ export default function CanvasWorkspace({ bg, onBack }) {
   const handleStageUp = (event) => {
     const gesture = gestureRef.current;
     if (!gesture) return;
+    if (gesture.mode === 'marquee') {
+      const distance = Math.hypot(event.clientX - gesture.clientX, event.clientY - gesture.clientY);
+      if (distance <= 6) {
+        const previous = lastBlankClickRef.current;
+        if (previous && event.timeStamp - previous.time <= 400 && Math.hypot(event.clientX - previous.x, event.clientY - previous.y) <= 8) {
+          lastBlankClickRef.current = null;
+          createEditableText(screenToWorld(event.clientX, event.clientY));
+        } else lastBlankClickRef.current = { time: event.timeStamp, x: event.clientX, y: event.clientY };
+      } else {
+        const rectangle = rectangleBetween(gesture.start, screenToWorld(event.clientX, event.clientY));
+        const padding = 6 / viewRef.current.zoom;
+        setSelectedIds(elementsRef.current.filter(element => !element.deleted && overlapsRectangle(element, rectangle, padding)).map(element => element.id));
+        lastBlankClickRef.current = null;
+      }
+      setMarquee(null);
+      gestureRef.current = null;
+      if (stageRef.current?.hasPointerCapture(event.pointerId)) stageRef.current.releasePointerCapture(event.pointerId);
+      return;
+    }
     if (gesture.mode === 'text') {
       createEditableText(gesture.point);
       gestureRef.current = null;
       if (stageRef.current?.hasPointerCapture(event.pointerId)) stageRef.current.releasePointerCapture(event.pointerId);
       return;
     }
-    if (gesture.mode !== 'pan') {
+    if (gesture.mode === 'move') {
+      if (gesture.moved) {
+        const after = gesture.before.map(element => elementsRef.current.find(current => current.id === element.id)).filter(Boolean).map(element => commit(element));
+        remember(gesture.before, after);
+      }
+    } else if (gesture.mode !== 'pan') {
       let after = elementsRef.current.find(element => element.id === gesture.id);
       if (after && gesture.mode === 'draw' && after.type !== 'pen' && Math.abs(after.w) + Math.abs(after.h) < 5) {
         after = commit({ ...after, w: after.type === 'line' ? 150 : 180, h: after.type === 'line' ? 0 : 110 });
       } else if (after) after = commit(after);
       if (after) remember(gesture.before, after);
     }
-    if (gesture.mode === 'pan' && gesture.blankClick) {
-      const distance = Math.hypot(event.clientX - gesture.clientX, event.clientY - gesture.clientY);
-      const previous = lastBlankClickRef.current;
-      if (distance <= 6 && previous && event.timeStamp - previous.time <= 400 && Math.hypot(event.clientX - previous.x, event.clientY - previous.y) <= 8) {
-        lastBlankClickRef.current = null;
-        createEditableText(screenToWorld(event.clientX, event.clientY));
-      } else lastBlankClickRef.current = distance <= 6 ? { time: event.timeStamp, x: event.clientX, y: event.clientY } : null;
-    } else lastBlankClickRef.current = null;
-    if (gesture.mode === 'draw' || (gesture.mode === 'pan' && gesture.tool === 'hand')) {
+    lastBlankClickRef.current = null;
+    if (gesture.mode === 'draw') {
       setTool('select'); toolRef.current = 'select';
     }
     gestureRef.current = null;
@@ -388,10 +442,10 @@ export default function CanvasWorkspace({ bg, onBack }) {
   };
 
   const deleteSelected = () => {
-    if (!selected) return;
-    const after = commit({ ...selected, deleted: true });
-    remember(selected, after);
-    setSelectedId(null);
+    if (!selectedElements.length) return;
+    const after = selectedElements.map(element => commit({ ...element, deleted: true }));
+    remember(selectedElements, after);
+    setSelectedIds([]);
   };
 
   const historyStep = (direction) => {
@@ -401,8 +455,9 @@ export default function CanvasWorkspace({ bg, onBack }) {
     if (!entry) return;
     destination.push(entry);
     const target = direction === 'undo' ? entry.before : entry.after;
-    commit(target || { ...entry.after, deleted: true });
-    setSelectedId(target && !target.deleted ? target.id : null);
+    for (const element of entry.after) commit(target.find(item => item.id === element.id) || { ...element, deleted: true });
+    for (const element of target) if (!entry.after.some(item => item.id === element.id)) commit(element);
+    setSelectedIds(target.filter(element => !element.deleted).map(element => element.id));
   };
 
   const addImage = async (file, point = null) => {
@@ -414,7 +469,7 @@ export default function CanvasWorkspace({ bg, onBack }) {
       const height = width * image.height / image.width;
       const after = commit({ id: uuidv4(), type: 'image', x: center.x - width / 2, y: center.y - height / 2, w: width, h: height, src: image.src });
       remember(null, after);
-      setSelectedId(after.id);
+      setSelectedIds([after.id]);
       setTool('select'); toolRef.current = 'select';
     } catch (error) { setNotice(error.message); }
   };
@@ -422,32 +477,33 @@ export default function CanvasWorkspace({ bg, onBack }) {
   useEffect(() => {
     const onKeyDown = event => {
       if (isEditingTarget(event.target)) return;
-      if (event.code === 'Space') { event.preventDefault(); spaceRef.current = true; }
-      if (event.key === 'Escape') { setSelectedId(null); setShareOpen(false); setTool('select'); toolRef.current = 'select'; return; }
+      if (event.code === 'Space') { event.preventDefault(); spaceRef.current = true; setSpaceHeld(true); return; }
+      if (event.key === 'Escape') { setSelectedIds([]); setMarquee(null); setShareOpen(false); setTool('select'); toolRef.current = 'select'; return; }
       if (event.key === 'Enter' && selected?.type === 'text') { event.preventDefault(); beginText(selected); return; }
-      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'd' && selected) {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'd' && selectedElements.length) {
         event.preventDefault();
-        const duplicate = commit({ ...translated(selected, 24, 24), id: uuidv4() });
-        remember(null, duplicate);
-        setSelectedId(duplicate.id);
+        const duplicates = selectedElements.map(element => commit({ ...translated(element, 24, 24), id: uuidv4() }));
+        remember(null, duplicates);
+        setSelectedIds(duplicates.map(element => element.id));
         return;
       }
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') { event.preventDefault(); historyStep(event.shiftKey ? 'redo' : 'undo'); return; }
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'y') { event.preventDefault(); historyStep('redo'); return; }
       if (event.key === 'Delete' || event.key === 'Backspace') { event.preventDefault(); deleteSelected(); return; }
-      if (selected && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key)) {
+      if (selectedElements.length && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key)) {
         event.preventDefault();
         const distance = event.shiftKey ? 10 : 1;
         const dx = event.key === 'ArrowLeft' ? -distance : event.key === 'ArrowRight' ? distance : 0;
         const dy = event.key === 'ArrowUp' ? -distance : event.key === 'ArrowDown' ? distance : 0;
-        const after = commit(translated(selected, dx, dy));
-        remember(selected, after);
+        const after = selectedElements.map(element => commit(translated(element, dx, dy)));
+        remember(selectedElements, after);
         return;
       }
       const shortcut = TOOLS.find(entry => entry.key.toLowerCase() === event.key.toLowerCase());
-      if (shortcut && !event.ctrlKey && !event.metaKey) { setTool(shortcut.id); toolRef.current = shortcut.id; if (shortcut.id !== 'select') setSelectedId(null); }
+      if (shortcut && !event.ctrlKey && !event.metaKey) { setTool(shortcut.id); toolRef.current = shortcut.id; if (shortcut.id !== 'select' && shortcut.id !== 'hand') setSelectedIds([]); }
     };
-    const onKeyUp = event => { if (event.code === 'Space') spaceRef.current = false; };
+    const onKeyUp = event => { if (event.code === 'Space') { spaceRef.current = false; setSpaceHeld(false); } };
+    const onBlur = () => { spaceRef.current = false; setSpaceHeld(false); };
     const onPaste = event => {
       if (isEditingTarget(event.target)) return;
       const file = Array.from(event.clipboardData?.files || []).find(item => item.type.startsWith('image/'));
@@ -455,8 +511,9 @@ export default function CanvasWorkspace({ bg, onBack }) {
     };
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('keyup', onKeyUp);
+    window.addEventListener('blur', onBlur);
     window.addEventListener('paste', onPaste);
-    return () => { window.removeEventListener('keydown', onKeyDown); window.removeEventListener('keyup', onKeyUp); window.removeEventListener('paste', onPaste); };
+    return () => { window.removeEventListener('keydown', onKeyDown); window.removeEventListener('keyup', onKeyUp); window.removeEventListener('blur', onBlur); window.removeEventListener('paste', onPaste); };
   });
 
   const zoomAt = (factor, clientX, clientY) => {
@@ -529,7 +586,7 @@ export default function CanvasWorkspace({ bg, onBack }) {
       <div className="canvas-top-right"><span className="canvas-save-status"><i />{saveStatus}</span><button className="canvas-share-button" onClick={() => invite ? setShareOpen(value => !value) : startShare()} title="实时共享画布"><FiShare2 /><span>{invite ? '共享中' : '实时共享'}</span></button></div>
     </header>
 
-    <main className={`canvas-stage canvas-tool-${tool}`} ref={stageRef}
+    <main className={`canvas-stage canvas-tool-${activeTool}`} ref={stageRef}
       style={{ '--grid-size': `${24 * view.zoom}px`, '--grid-x': `${view.x}px`, '--grid-y': `${view.y}px`, touchAction: editing ? 'auto' : 'none' }}
       onPointerDown={handleStageDown} onPointerMove={handleStageMove} onPointerUp={handleStageUp} onPointerCancel={handleStageUp}
       onWheel={event => {
@@ -539,17 +596,17 @@ export default function CanvasWorkspace({ bg, onBack }) {
       }}
       onDragOver={event => event.preventDefault()}
       onDrop={event => { event.preventDefault(); const file = Array.from(event.dataTransfer.files).find(item => item.type.startsWith('image/')); if (file) addImage(file, screenToWorld(event.clientX, event.clientY)); }}>
-      <svg className="canvas-svg" aria-label="无限画布绘图区"><g transform={`translate(${view.x} ${view.y}) scale(${view.zoom})`}>{elements.filter(element => !element.deleted).map(element => <CanvasElement key={element.id} element={element} selected={selectedId === element.id} editing={editingId === element.id} onPointerDown={event => handleElementDown(event, element)} onResizePointerDown={event => handleResizeDown(event, element)} onDoubleClick={event => { event.stopPropagation(); if (element.type === 'text') beginText(element); }} />)}</g></svg>
+      <svg className="canvas-svg" aria-label="无限画布绘图区"><g transform={`translate(${view.x} ${view.y}) scale(${view.zoom})`}>{elements.filter(element => !element.deleted).map(element => <CanvasElement key={element.id} element={element} selected={selectedIds.includes(element.id)} showResize={selectedElements.length === 1} editing={editingId === element.id} onPointerDown={event => handleElementDown(event, element)} onResizePointerDown={event => handleResizeDown(event, element)} onDoubleClick={event => { event.stopPropagation(); if (element.type === 'text') beginText(element); }} />)}{marquee && <rect className="canvas-marquee" x={marquee.x} y={marquee.y} width={marquee.w} height={marquee.h} pointerEvents="none" />}</g></svg>
       {editing && <div className="canvas-text-editor-shell" style={{ left: editingLeft, top: editingTop, width: editingWidth, maxHeight: editingMaxHeight, fontFamily: fontFamily(editing.font), fontSize: (editing.fontSize || 28) * view.zoom, lineHeight: editing.lineHeight || 1.4, textAlign: editing.textAlign || 'left', color: editing.color }}><span className="canvas-text-editor-measure" aria-hidden="true">{editText || '\u200b'}{editText.endsWith('\n') ? '\u200b' : ''}</span><textarea ref={editRef} className="canvas-text-editor" value={editText} onChange={event => setEditText(event.target.value)} onBlur={finishText} onPointerDown={event => event.stopPropagation()} onWheel={event => event.stopPropagation()} onKeyDown={event => { if (event.key === 'Escape' || ((event.ctrlKey || event.metaKey) && event.key === 'Enter')) { event.preventDefault(); finishText(); } }} placeholder="在这里写下想法…" spellCheck={false} aria-label="编辑画布文字" /></div>}
       {!elements.some(element => !element.deleted) && ready && <div className="canvas-empty"><span>01 / A SPACE TO THINK</span><strong>从一个想法开始。</strong><p>写字、贴图、画线。画布会随着你的思路一直延伸。</p><button onClick={() => { setTool('text'); toolRef.current = 'text'; }}>添加第一段文字 <FiArrowDownLeft /></button></div>}
       {ready && !hasSynced && <div className="canvas-sync-wait"><strong>{status.state === 'error' ? '共享连接失败' : status.state === 'reconnecting' ? '正在重新连接' : '正在加入共享画布'}</strong><span>{status.message || '等待发起者保持画布打开并完成连接…'}</span>{['error', 'disconnected', 'decrypt-error'].includes(status.state) && <button onClick={retryShare}>重新连接</button>}</div>}
     </main>
 
-    <aside className="canvas-toolbox" aria-label="画布工具">{TOOLS.map(({ id, label, Icon, key }) => <button key={id} className={tool === id ? 'active' : ''} title={`${label} (${key})`} aria-label={label} aria-pressed={tool === id} onClick={() => { setTool(id); toolRef.current = id; if (id !== 'select') setSelectedId(null); }}><Icon /></button>)}<span className="canvas-tool-divider" /><button title="插入图片" aria-label="插入图片" onClick={() => fileRef.current?.click()}><FiImage /></button><input ref={fileRef} hidden type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={event => { if (event.target.files[0]) addImage(event.target.files[0]); event.target.value = ''; }} /></aside>
+    <aside className="canvas-toolbox" aria-label="画布工具">{TOOLS.map(({ id, label, Icon, key }) => <button key={id} className={activeTool === id ? 'active' : ''} title={`${label} (${key}${id === 'hand' ? ' / 按住空格' : ''})`} aria-label={label} aria-pressed={activeTool === id} onClick={() => { setTool(id); toolRef.current = id; if (id !== 'select' && id !== 'hand') setSelectedIds([]); }}><Icon /></button>)}<span className="canvas-tool-divider" /><button title="插入图片" aria-label="插入图片" onClick={() => fileRef.current?.click()}><FiImage /></button><input ref={fileRef} hidden type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={event => { if (event.target.files[0]) addImage(event.target.files[0]); event.target.value = ''; }} /></aside>
 
-    <div className="canvas-properties" aria-label={propertyMode === 'text' ? '文字属性' : propertyMode === 'image' ? '图片属性' : '形状属性'}>
-      <span className="canvas-properties-label">{propertyMode === 'text' ? '文字' : propertyMode === 'image' ? '图片' : '绘制'}</span>
-      {propertyMode !== 'image' && <>
+    <div className="canvas-properties" aria-label={propertyMode === 'multi' ? '多选操作' : propertyMode === 'text' ? '文字属性' : propertyMode === 'image' ? '图片属性' : '形状属性'}>
+      <span className="canvas-properties-label">{propertyMode === 'multi' ? `已选 ${selectedElements.length} 项` : propertyMode === 'text' ? '文字' : propertyMode === 'image' ? '图片' : '绘制'}</span>
+      {propertyMode !== 'image' && propertyMode !== 'multi' && <>
         <div className="canvas-colors" aria-label={propertyMode === 'text' ? '文字颜色' : '描边颜色'}>{CANVAS_COLORS.map(swatch => <button key={swatch} className={(selected?.color || (propertyMode === 'text' ? textColor : strokeColor)) === swatch ? 'active' : ''} style={{ '--swatch': swatch }} aria-label={`颜色 ${swatch}`} title={swatch} onClick={() => { if (propertyMode === 'text') setTextColor(swatch); else setStrokeColor(swatch); if (selected) changeSelected({ color: swatch }); }} />)}</div>
         <span className="canvas-property-divider" />
       </>}
@@ -562,7 +619,8 @@ export default function CanvasWorkspace({ bg, onBack }) {
       </>}
       {propertyMode === 'shape' && <label className="canvas-select-wrap"><span>线宽</span><select aria-label="线宽" value={selected?.strokeWidth || strokeWidth} onChange={event => { const value = Number(event.target.value); setStrokeWidth(value); if (selected && selected.type !== 'text' && selected.type !== 'image') changeSelected({ strokeWidth: value }); }}><option value="2">细</option><option value="3">标准</option><option value="6">粗</option></select></label>}
       {propertyMode === 'image' && <span className="canvas-properties-hint">拖动边角调整图片</span>}
-      {selected && <button className="canvas-delete" title="删除所选元素" onClick={deleteSelected}><FiTrash2 /></button>}
+      {propertyMode === 'multi' && <span className="canvas-properties-hint">拖动任一元素可整体移动</span>}
+      {selectedElements.length > 0 && <button className="canvas-delete" title="删除所选元素" onClick={deleteSelected}><FiTrash2 /></button>}
     </div>
 
     <div className="canvas-bottom-left"><span className={`canvas-connection-dot ${status.state}`} />{statusText}</div>

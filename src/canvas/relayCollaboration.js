@@ -1,6 +1,9 @@
 import { CHUNK_SIZE, decryptCanvasMessage, encryptCanvasMessage, importCanvasKey } from './secureChannel';
 
-const RELAY_URL = import.meta.env.VITE_CANVAS_RELAY_URL?.trim();
+const configuredRelayUrl = import.meta.env.VITE_CANVAS_RELAY_URL?.trim();
+const RELAY_URL = configuredRelayUrl && !/^[a-z][a-z\d+.-]*:\/\//i.test(configuredRelayUrl)
+  ? `https://${configuredRelayUrl}`
+  : configuredRelayUrl;
 
 export const hasCanvasRelay = Boolean(RELAY_URL);
 

@@ -24,10 +24,13 @@
 .canvas-stage { position: absolute; inset: 0; touch-action: none; overflow: hidden; cursor: crosshair; background-image: radial-gradient(circle,#d4e9e532 1px,transparent 1.2px); background-size: var(--grid-size) var(--grid-size); background-position: var(--grid-x) var(--grid-y); }
 .canvas-stage.canvas-tool-hand { cursor: grab; }
 .canvas-stage:active.canvas-tool-hand { cursor: grabbing; }
+.canvas-stage.canvas-tool-hand .canvas-element { cursor: grab; }
+.canvas-stage:active.canvas-tool-hand .canvas-element { cursor: grabbing; }
 .canvas-stage.canvas-tool-select { cursor: default; }
 .canvas-svg { width: 100%; height: 100%; overflow: visible; user-select: none; }
 .canvas-element { cursor: move; }
 .canvas-element .canvas-selection { fill: none; stroke: #afe9d2; stroke-width: 1.4; vector-effect: non-scaling-stroke; pointer-events: none; filter: drop-shadow(0 0 4px #8cdfba80); }
+.canvas-marquee { fill: #a7e5cb29; stroke: #a7e5cb; stroke-width: 1.25; vector-effect: non-scaling-stroke; filter: drop-shadow(0 0 5px #8cdfba6b); }
 .canvas-resize-handle { fill: #c6f1de; stroke: #173d39; stroke-width: 2; cursor: nwse-resize; }
 .canvas-text-resize-handle { fill: #c6f1de; stroke: #173d39; stroke-width: 2; cursor: ew-resize; }
 .canvas-toolbox { position: absolute; z-index: 4; left: max(20px,env(safe-area-inset-left)); top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 4px; padding: 7px; border: 1px solid #ffffff34; border-radius: 16px; background: #132a35da; box-shadow: 0 18px 50px #0005,inset 0 1px #ffffff1a; backdrop-filter: blur(25px); }

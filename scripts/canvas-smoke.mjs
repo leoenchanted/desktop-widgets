@@ -188,7 +188,7 @@ try {
   await guest.mouse.down();
   await guest.mouse.move(420, 510);
   await guest.mouse.up();
-  assert.equal(await guest.getByRole('button', { name: '选择', exact: true }).getAttribute('aria-pressed'), 'true');
+  assert.equal(await guest.getByRole('button', { name: '移动画布' }).getAttribute('aria-pressed'), 'true');
   const png = await guest.evaluate(() => {
     const canvas = document.createElement('canvas');
     canvas.width = 12; canvas.height = 12;

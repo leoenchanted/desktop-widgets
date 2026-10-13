@@ -21,6 +21,23 @@ const TOOLS = [
 
 const DEFAULT_VIEW = { x: 0, y: 0, zoom: 1 };
 const MAX_IMAGE_BYTES = 12 * 1024 * 1024;
+const CANVAS_CLIPBOARD_TYPE = 'application/x-desktop-widgets-canvas';
+const CANVAS_CLIPBOARD_PREFIX = 'desktop-widgets-canvas:';
+
+function readCanvasClipboard(clipboardData) {
+  const custom = clipboardData?.getData(CANVAS_CLIPBOARD_TYPE);
+  const plain = clipboardData?.getData('text/plain');
+  const serialized = custom || (plain?.startsWith(CANVAS_CLIPBOARD_PREFIX) ? plain.slice(CANVAS_CLIPBOARD_PREFIX.length) : '');
+  if (!serialized) return null;
+  try {
+    const data = JSON.parse(serialized);
+    if (data?.app !== 'desktop-widgets' || !Array.isArray(data.elements)) return null;
+    const elements = data.elements.filter(element => element && !element.deleted
+      && ['rect', 'ellipse', 'line', 'pen', 'text', 'image'].includes(element.type)
+      && Number.isFinite(element.x) && Number.isFinite(element.y));
+    return elements.length ? { elements, serialized } : null;
+  } catch { return null; }
+}
 
 function rectangleBetween(start, end) {
   return { x: Math.min(start.x, end.x), y: Math.min(start.y, end.y), w: Math.abs(end.x - start.x), h: Math.abs(end.y - start.y) };
@@ -133,6 +150,7 @@ export default function CanvasWorkspace({ bg, onBack }) {
   const [status, setStatus] = useState(() => ({ state: readInvite() ? 'connecting' : 'local', peers: 0, message: '' }));
   const [notice, setNotice] = useState('');
   const [saveStatus, setSaveStatus] = useState('已保存在此浏览器');
+  const workspaceRef = useRef(null);
   const stageRef = useRef(null);
   const fileRef = useRef(null);
   const editRef = useRef(null);
@@ -147,11 +165,21 @@ export default function CanvasWorkspace({ bg, onBack }) {
   const textBeforeRef = useRef(null);
   const undoRef = useRef([]);
   const redoRef = useRef([]);
+  const lastPasteRef = useRef({ serialized: '', count: 0 });
 
   const setViewState = useCallback(next => {
     viewRef.current = next;
     setView(next);
   }, []);
+
+  const zoomAt = useCallback((factor, clientX, clientY) => {
+    const rect = stageRef.current.getBoundingClientRect();
+    const current = viewRef.current;
+    const zoom = Math.max(.15, Math.min(4, current.zoom * factor));
+    const x = clientX - rect.left;
+    const y = clientY - rect.top;
+    setViewState({ x: x - (x - current.x) * zoom / current.zoom, y: y - (y - current.y) * zoom / current.zoom, zoom });
+  }, [setViewState]);
 
   const applyIncoming = useCallback(incoming => {
     const list = Array.isArray(incoming) ? incoming : [incoming];
@@ -504,26 +532,54 @@ export default function CanvasWorkspace({ bg, onBack }) {
     };
     const onKeyUp = event => { if (event.code === 'Space') { spaceRef.current = false; setSpaceHeld(false); } };
     const onBlur = () => { spaceRef.current = false; setSpaceHeld(false); };
+    const onCopy = event => {
+      if (isEditingTarget(event.target) || !selectedElements.length || !event.clipboardData) return;
+      const serialized = JSON.stringify({ app: 'desktop-widgets', elements: selectedElements });
+      event.clipboardData.setData('text/plain', `${CANVAS_CLIPBOARD_PREFIX}${serialized}`);
+      event.clipboardData.setData(CANVAS_CLIPBOARD_TYPE, serialized);
+      event.preventDefault();
+      lastPasteRef.current = { serialized: '', count: 0 };
+    };
     const onPaste = event => {
       if (isEditingTarget(event.target)) return;
+      const copied = readCanvasClipboard(event.clipboardData);
+      if (copied) {
+        event.preventDefault();
+        if (!hasSynced) { setNotice('正在等待共享画布同步'); return; }
+        const count = lastPasteRef.current.serialized === copied.serialized ? lastPasteRef.current.count + 1 : 1;
+        lastPasteRef.current = { serialized: copied.serialized, count };
+        const duplicates = copied.elements.map(element => commit({ ...translated(element, 24 * count, 24 * count), id: uuidv4(), deleted: false }));
+        remember(null, duplicates);
+        setSelectedIds(duplicates.map(element => element.id));
+        setTool('select'); toolRef.current = 'select';
+        return;
+      }
       const file = Array.from(event.clipboardData?.files || []).find(item => item.type.startsWith('image/'));
       if (file) { event.preventDefault(); addImage(file); }
     };
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('keyup', onKeyUp);
     window.addEventListener('blur', onBlur);
+    window.addEventListener('copy', onCopy);
     window.addEventListener('paste', onPaste);
-    return () => { window.removeEventListener('keydown', onKeyDown); window.removeEventListener('keyup', onKeyUp); window.removeEventListener('blur', onBlur); window.removeEventListener('paste', onPaste); };
+    return () => { window.removeEventListener('keydown', onKeyDown); window.removeEventListener('keyup', onKeyUp); window.removeEventListener('blur', onBlur); window.removeEventListener('copy', onCopy); window.removeEventListener('paste', onPaste); };
   });
 
-  const zoomAt = (factor, clientX, clientY) => {
-    const rect = stageRef.current.getBoundingClientRect();
-    const current = viewRef.current;
-    const zoom = Math.max(.15, Math.min(4, current.zoom * factor));
-    const x = clientX - rect.left;
-    const y = clientY - rect.top;
-    setViewState({ x: x - (x - current.x) * zoom / current.zoom, y: y - (y - current.y) * zoom / current.zoom, zoom });
-  };
+  useEffect(() => {
+    const workspace = workspaceRef.current;
+    const onWheel = event => {
+      if (event.ctrlKey || event.metaKey) {
+        event.preventDefault();
+        const delta = event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? 100 : 1);
+        zoomAt(Math.exp(-Math.max(-120, Math.min(120, delta)) * .002), event.clientX, event.clientY);
+      } else if (stageRef.current?.contains(event.target) && !isEditingTarget(event.target)) {
+        event.preventDefault();
+        setViewState({ ...viewRef.current, x: viewRef.current.x - event.deltaX, y: viewRef.current.y - event.deltaY });
+      }
+    };
+    workspace.addEventListener('wheel', onWheel, { passive: false });
+    return () => workspace.removeEventListener('wheel', onWheel);
+  }, [setViewState, zoomAt]);
 
   const fitCanvas = () => {
     const visible = elementsRef.current.filter(element => !element.deleted);
@@ -579,7 +635,7 @@ export default function CanvasWorkspace({ bg, onBack }) {
 
   const statusText = status.state === 'hosting' ? `正在共享 · ${status.peers} 人已加入` : status.state === 'connected' ? '实时连接中' : status.state === 'connecting' ? '正在连接…' : status.state === 'reconnecting' ? status.message || '正在重新连接…' : status.state === 'error' ? `连接失败：${status.message || '请稍后重试'}` : status.state === 'decrypt-error' ? '解密失败，请检查邀请链接' : status.state === 'disconnected' ? '连接已断开，画布仍保存在本机' : '仅在此浏览器';
 
-  return <div className="canvas-workspace" style={{ '--canvas-wallpaper': bg ? `url(${JSON.stringify(bg)})` : 'none' }}>
+  return <div className="canvas-workspace" ref={workspaceRef} style={{ '--canvas-wallpaper': bg ? `url(${JSON.stringify(bg)})` : 'none' }}>
     <div className="canvas-wallpaper" />
     <header className="canvas-topbar">
       <div className="canvas-top-left"><button className="canvas-back" onClick={leaveCanvas} title="返回桌面"><FiArrowLeft /><span>返回桌面</span></button><span className="canvas-top-divider" /><div className="canvas-title"><small>DESKTOP / CANVAS</small><strong>无限画布</strong></div></div>
@@ -589,11 +645,6 @@ export default function CanvasWorkspace({ bg, onBack }) {
     <main className={`canvas-stage canvas-tool-${activeTool}`} ref={stageRef}
       style={{ '--grid-size': `${24 * view.zoom}px`, '--grid-x': `${view.x}px`, '--grid-y': `${view.y}px`, touchAction: editing ? 'auto' : 'none' }}
       onPointerDown={handleStageDown} onPointerMove={handleStageMove} onPointerUp={handleStageUp} onPointerCancel={handleStageUp}
-      onWheel={event => {
-        event.preventDefault();
-        if (event.ctrlKey || event.metaKey) zoomAt(Math.exp(-event.deltaY * .008), event.clientX, event.clientY);
-        else setViewState({ ...viewRef.current, x: viewRef.current.x - event.deltaX, y: viewRef.current.y - event.deltaY });
-      }}
       onDragOver={event => event.preventDefault()}
       onDrop={event => { event.preventDefault(); const file = Array.from(event.dataTransfer.files).find(item => item.type.startsWith('image/')); if (file) addImage(file, screenToWorld(event.clientX, event.clientY)); }}>
       <svg className="canvas-svg" aria-label="无限画布绘图区"><g transform={`translate(${view.x} ${view.y}) scale(${view.zoom})`}>{elements.filter(element => !element.deleted).map(element => <CanvasElement key={element.id} element={element} selected={selectedIds.includes(element.id)} showResize={selectedElements.length === 1} editing={editingId === element.id} onPointerDown={event => handleElementDown(event, element)} onResizePointerDown={event => handleResizeDown(event, element)} onDoubleClick={event => { event.stopPropagation(); if (element.type === 'text') beginText(element); }} />)}{marquee && <rect className="canvas-marquee" x={marquee.x} y={marquee.y} width={marquee.w} height={marquee.h} pointerEvents="none" />}</g></svg>
